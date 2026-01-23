@@ -1,0 +1,366 @@
+---
+title: "Introduction to statistical learning"
+author: "Ayush Patel"
+subtitle: "DDD: Elements of Statistical Machine Learning & Politics of Data"
+institute: "At Azim Premji University, Bhopal"
+date: today
+date-format: "DD MMM, YYYY"
+format: 
+  revealjs:
+    embed-resources: true
+    margin-left: 50px
+    margin-right: 50px
+    slide-number: c/t
+    width: 1400
+    height: 850
+    theme: [default, theme.scss]
+    footer: "Email: ayush.ap58@gmail.com"
+---
+
+# Hello
+
+::::{.columns}
+
+:::{.column}
+
+[I am Ayush.]{.fragment fragment-index="1" style="font-size:45px"}
+
+[I am a researcher working at the intersection of data, development and economics.]{.fragment fragment-index="2" style="font-size:25px"}
+
+[I am a [RStudio (Posit) certified tidyverse Instructor.](https://education.rstudio.com/trainers/people/patel+ayush/)]{.fragment fragment-index="3" style="font-size:25px"}
+
+[I am a Researcher at [Oxford Poverty and Human development Initiative (OPHI)](https://ophi.org.uk/), at the University of Oxford.]{.fragment fragment-index="4" style="font-size:25px"}
+
+:::
+
+:::{.column}
+
+![[Hello (Eh bonjour– donc–.) by Charles Motte](https://www.metmuseum.org/art/collection/search/392118"Well)](https://images.metmuseum.org/CRDImages/dp/original/DP808141.jpg){fig-align="center" height=400 .lightbox}
+ 
+
+:::
+
+::::
+
+# Did you come prepared?
+
+::::{.columns}
+
+:::{.column}
+You have installed R. If not see [this link]().
+
+You have installed RStudio/Positron/VScode or any other IDE. It is recommended that you work through an IDE
+
+You have the libraries `{tidyverse}  {caret} {ISLR} {ISLR2}` installed
+
+:::
+
+:::{.column}
+
+![[Armor (Gusoku) Helmet signed by Bamen Tomotsugu](https://www.metmuseum.org/art/collection/search/24975)](https://images.metmuseum.org/CRDImages/aa/original/DT5333.jpg){fig-align="center" height=400 .lightbox}
+
+
+:::
+
+::::
+
+
+# Learning Goals
+
+1. What does "*Statistical Learning*" mean.
+2. What are supervised and unsupervised methods.
+3. What are regression and classification settings.
+4. Conceptual meaning of parametric and non-parametric methods.
+5. How to assess the quality of fit of the model.
+6. Intuitive understanding of the Bias-Variance Trade-Off.
+
+# Why are we doing this?
+
+:::: {.columns}
+
+::: {.column}
+*So that people think ...*
+
+![](https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExMmYwbDN3ODE1bmVkaHZkdWk1N2VhcjNtbmhubmJncnBjemF3N204byZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o85xr9ZKY1wbbJXDW/giphy.gif){height=400}
+
+:::
+
+::: {.column}
+*It all comes down to ...*
+
+![](https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExajUxMGNqc3JldTJseGwwcmE5NmJ5N21janhxeHMwbTRseHlieXoyYyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/xTiTnqUxyWbsAXq7Ju/giphy.gif)
+
+:::
+
+::::
+ <!-- end columns -->
+
+# One might have other goals
+
+:::{.incremental}
+
+1. Where does the data come from?  Distributions, data generating process ...
+2. What does the data measure? What it aims/claims to measure, what it actually measures
+3. Finding patterns
+4. To say something about all by looking at the few
+5. To predict
+6. To understand cause and effect
+
+:::
+
+# Are these goals the same?
+
+::::{.columns}
+
+:::{.column}
+
+1. Can you estimate the risk of heart problems by looking at cholesterol?
+2. Can you estimate income by looking at education and gender?
+3. Can you establish if eating a statin reduces the risk of heart attack?
+
+:::
+
+:::{.column}
+
+1. By looking at various demographics of individuals can you group them?
+2. Given different pictures of animals/trees can you group them?
+3. Can you guess how music streaming services recommend songs to you?
+
+:::
+
+
+::::
+
+# Guess for penguin bodymass?
+
+```{r}
+#| echo: false
+#| warning: false
+#| fig-align: center
+#| column: screen
+
+palmerpenguins::penguins |>
+  ggplot2::ggplot(ggplot2::aes(flipper_length_mm,body_mass_g)) +
+  ggplot2::geom_jitter(colour = "#78e784") +
+  ggplot2::theme_minimal() +
+  ggplot2::labs(
+    title = "Can you guess the bodymass of a penguin with flipper length 203mm?",
+    x = "Flipper Length in mm",
+    y = "Body mass in grams"
+  ) +
+  ggplot2::theme(
+    plot.title.position = "plot",
+    axis.text = ggplot2::element_text(size = 12)
+  )
+
+```
+
+# Can you group these?
+
+![image generated using Chatgpt](images/beforeclustering.png)
+
+# Most would come to similar conclusion
+
+![image generated using Chatgpt](images/clusteredoutput.png)
+
+# Hint?
+
+::::{.columns}
+
+:::{.column}
+
+1. Can you estimate the [risk of heart]{.blue} problems by looking at [cholesterol]{.green}?
+2. Can you estimate [income]{.blue} by looking at [education]{.green} and [gender]{.green}?
+3. Can you establish if [eating a statin]{.green} reduces the [risk of heart attack]{.blue}?
+
+:::
+
+:::{.column}
+
+1. By looking at various[ demographics]{.green} of individuals can you group them?
+2. Given different [pictures of animals/trees]{.green} can you group them?
+3. Can you guess how music streaming services recommend songs to you ([from what you have heard]{.green})?
+
+:::
+
+
+::::
+
+# Supervised Learning
+
+:::{.incremental}
+
+1. Used for prediction/estimation/causal tasks
+2. Involves figuring out the value taken by [response variable]{.blue} for a given set of [predictors]{.green}.
+3. The *response or output* is **[supervising]{.hilit}** the model or learning
+
+:::
+
+# Unsupervised Learning
+
+:::{.incremental}
+
+1. There are only *inputs*. [No outputs.]{.hilit}
+2. Involves learning about structure of data, relationship between inputs and/or observation.
+3. Since there is no response/output, these models are **[Unsupervised]{.hilit}**
+
+:::
+
+# Statistical Learning
+
+:::{.incremental}
+
+- [Statistical Learning]{.blue} refers to a [set of tools]{.hilit} that can help with [such goals]{.hilit}.
+- *set of tools* can be sorted into two major buckets: [Parametric and Non-parametric methods]{.blue}
+- *such goals* can be sorted into two major buckets: [Supervised and Unsupervised Learning problems]{.blue}
+
+:::
+
+# Statistical Learning
+
+*What were you trying to do inorder to answer the previous two exercises?*
+
+> Your guess regarding *[the logic, the system, the rule or the function]{.hilit}* that can answer your question (predict body mass, group items), when described in mathematically robust manner is Statistical learning.
+
+> It is a set of tools that allow you to estimate *[the function]{.hilit}* that generates the response or dictates the grouping.
+
+## So in order to achieve *such goals* we must use *these tools* to **estimate** THE function.
+<br><br>
+So we can predict, infer or group, or more.
+<br><br>
+Let the refer $f$ to THE function that actually generates the response($Y). 
+<br><br>
+Let $X$ denote a set of inputs that $f$ requires.
+<br><br>
+Let $\epsilon$ denote the error term
+
+# The Truth
+
+$$Y = f(X) + \epsilon$$
+
+# How to estimate $f$?
+
+There are two broad ways to estimate $f$;
+
+1. Parametric Methods
+2. Non-Parametric Methods
+
+# Parametric Method
+
+:::{.incremental}
+
+1. We begin by changing the goal post. Instead of estimating the real shape of $f$, we assume the shape of $f$. Care to guess how we decide upon the assumed shape of $f$?
+2. So, now instead of finding out an n-dimensional shape, we only have to estimate n+1 parameters
+3. A "method" is needed to do so. Method uses the "training data" to fit the "model" (model is the assumed shape). 
+4. We are *literally* estimating parameters of an assumed function, so these methods are called parametric methods.
+5. If our assumed shape $\hat{f}$ is too far from reality ($f$), we will end up with poor estimates.
+
+:::
+
+# Non-Parametric
+
+:::{.incremental}
+
+1. No assumption about the shape of $f$ is made.
+2. These methods estimate $f$ as close to data points as possible without being two rough or wiggly.
+3. Since these methods make no assumption about the shape of $f$, these can fit more shapes than parametric methods.
+4. But since there is no assumed shape these methods require a lot more data than parametric methods.
+
+:::
+
+# flexibility and Overfitting
+
+*flexibility* is referred to the range of shapes a function can fit. More flexible functions can fit more shapes.
+<br><br>
+*Overfitting* refers to situations where the complexity of models can potentially lead to closely following the noise.
+
+# Prediction Accuracy and Model Interpretability Trade-Off
+
+:::{.incremental}
+
+1. Restrictive or less flexible methods have a smaller range of shape it can produce compare to flexible methods.
+2. Does this mean we should always choose more flexible and/or non-parametric approach?
+3. If the goal is inference, it is prudent to choose a relatively less flexible methods as it can be more convenient to interpret.
+4. If prediction is the goal, and interpretability is not a concern, we may choose more flexible methods while avoiding overfitting.
+
+:::
+
+# Regression vs classification
+
+- When response is quantitative - Regression problem
+- When response is qualitative - Classification problem
+- There are situations where the distinction is not so clean. 
+- There are methods that can do both, regression and classification, K-nn, Decision trees, boosting etc.
+- The nature of predictors is less serious issues. As long as qualitative predictors are appropriately coded, most methods in the book can be used for the right response variable type.
+
+# Measuring Quality of fit
+
+$$MSE = \frac{1}{n}\sum_{i=1}^{n}{(y_i - \hat{f(x_i)})^2}$$
+
+<br>
+When calculated with training data - training MSE
+<br>
+When calculate with test data - test MSE(is test data easily available?)
+<br>
+Why is test MSE more useful to choose between methods over training MSE?
+<br>
+Overfitting - cases where a less flexible method would have resulted a smaller test MSE.
+
+# The Bias-Variance Trade-Off
+
+The expected test MSE can be decomposed in three parts:
+
+1. The variance of $\hat{f}_0$
+2. The squared bias of $\hat{f}_0$
+3. The variance of the error term
+
+$$\mathbb{E}[Y-\hat{Y}] = Var(\hat{f}_0) + [Bais(\hat{f}_0)]^2 + Var(\epsilon)$$
+
+# The Bias-Variance Trade-Off
+
+:::{.incremental}
+
+1. The variance and the squared bias are competing properties that develop the U-shaped test MSE.
+
+2. To minimize the test MSE we need to pick a methods that achieves low variance *and* low bias.
+
+3. Since both Variance and the squared bias is also a non-negative quantity, the test MSE can never be below the variance of the error term $\epsilon$.
+
+4. The variance of a method is the amount by which $\hat{f}$ would change if it is estimated using a different training data set. Generally, more flexible methods have more variance.
+
+5. "bias refers to the error that is introduced by approximating a real-life problem, which may be extremely complicated, by a much simpler model."
+
+6. "Generally, more flexible methods result in less bias. As a general rule, as we use more flexible methods, the variance will increase and the bias will decrease. 
+
+:::
+
+# Classification Setting
+
+Error Rate:
+
+
+$\frac{1}{n}\sum_{i=1}^{n}{I(y_i \neq \hat{y}_i)}$ 
+
+if computed using training data, it is called training error. If computed using test data it is called test error. Book makes a distinction but it is the same thing in the applied/empirical sense.
+
+# The Bayes Classifier
+
+On an average test error rate is minimized by the bayes classifier.
+
+$Pr(Y=j|X=x_0)$
+
+For every prediction, the Bayes classifier assigns the class with the highest conditional probability.
+
+*Bayes decision boundary* is the trace where the conditional probability of $Y$ given some $X$ is equal for two or more classes of $Y$.
+
+The *Bayes error rate* is also used as a standard to compare error rates of other classification methods. It is analogous to the irreducible error rate in the regression setting.
+
+# Well, THEN WHY EVEN USE OTHER METHODS FOR CLASSIFICATION??
+
+# Well, in the real world ...
+
+*In practice one rarely knows the conditional probability of $Y$ given $X$*
+
+But there are methods like KNN that attempt to emulate the Bayes Classifier. 
+
+*How does KNN work?* KNN finds the K (defined by the user) closest points to a test case and estimates the conditional probability of $Y$ given $X$ for that test case as the fraction of K for each class. KNN then assigns the class with the highest estimated probability to the test case.
