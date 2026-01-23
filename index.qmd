@@ -1,0 +1,33 @@
+---
+title: "Course Landing Page"
+format: html
+embed-resources: true 
+---
+
+Topics to be covered:
+
+1. Unit1: Same as Current Structure
+2. Unit2: Refresher on Linear Regression & Resampling methods
+3. Unit3: Tree based methods
+4. Unit4: Same as Unit2 of the Current Structure
+5. Unit5: Sentiment analysis
+
+If we have more time we may also cover one or more of:
+
+1. RDD
+2. RCT
+3. IV
+
+[Lecture Slides](23-01-2026-intro-to-statistical-learning.html): Intro to Statistical Learning.
+
+Assessment Details
+
+Type        |   # ILO linkages  | Assessment Percentage |  Details                       
+------------|-------------------|-----------------------|------------------------------------------------------
+Quiz        | 1                 | 15                    | Intro to statistical learning and Linear Regression
+inclass exam| 1                 | 30                    | LR, resampling, decision trees
+inclass exam| 2                 | 30                    | PCA, sentiment analysis, Ethics of data
+CP          | 3                 | 5                     | 
+GRP Prjoect | 2                 | 20                    |  apply machine methods learned in class to real data and present their findings. 
+
+May change with adequate notice.

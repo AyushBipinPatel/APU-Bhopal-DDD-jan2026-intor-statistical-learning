@@ -364,3 +364,7 @@ The *Bayes error rate* is also used as a standard to compare error rates of othe
 But there are methods like KNN that attempt to emulate the Bayes Classifier. 
 
 *How does KNN work?* KNN finds the K (defined by the user) closest points to a test case and estimates the conditional probability of $Y$ given $X$ for that test case as the fraction of K for each class. KNN then assigns the class with the highest estimated probability to the test case.
+
+# Readings
+
+ISLR Chapter2: 2.1 - 2.2 and 2.4
