@@ -1,0 +1,471 @@
+---
+title: "Linear Regressions (Refresher)"
+author: "Ayush Patel"
+subtitle: "DDD: Elements of Statistical Machine Learning & Politics of Data"
+institute: "At Azim Premji University, Bhopal"
+date: today
+date-format: "DD MMM, YYYY"
+format: 
+  revealjs:
+    fig-height: 6
+    fig-width: 14
+    embed-resources: true
+    margin-left: 50px
+    margin-right: 50px
+    slide-number: c/t
+    width: 1400
+    height: 850
+    theme: [default, theme.scss]
+    footer: "Email: ayush.ap58@gmail.com"
+---
+
+```{r}
+#| include: false
+#| warning: false
+
+library(tidyverse)
+library(openintro)
+library(ISLR2)
+```
+
+# Hello
+
+::::{.columns}
+
+:::{.column}
+
+[I am Ayush.]{.fragment fragment-index="1" style="font-size:45px"}
+
+[I am a researcher working at the intersection of data, development and economics.]{.fragment fragment-index="2" style="font-size:25px"}
+
+[I am a [RStudio (Posit) certified tidyverse Instructor.](https://education.rstudio.com/trainers/people/patel+ayush/)]{.fragment fragment-index="3" style="font-size:25px"}
+
+[I am a Researcher at [Oxford Poverty and Human development Initiative (OPHI)](https://ophi.org.uk/), at the University of Oxford.]{.fragment fragment-index="4" style="font-size:25px"}
+
+:::
+
+:::{.column}
+
+![[Hello (Eh bonjour– donc–.) by Charles Motte](https://www.metmuseum.org/art/collection/search/392118"Well)](https://images.metmuseum.org/CRDImages/dp/original/DP808141.jpg){fig-align="center" height=400 .lightbox}
+ 
+
+:::
+
+::::
+
+# Did you come prepared?
+
+::::{.columns}
+
+:::{.column}
+- You have installed R. If not see [this link]().
+
+- You have installed RStudio/Positron/VScode or any other IDE. It is recommended that you work through an IDE
+
+- You have the libraries `{tidyverse}  {caret} {ISLR} {ISLR2} {openintro} {broom}` installed
+
+:::
+
+:::{.column}
+
+![[Armor (Gusoku) Helmet signed by Bamen Tomotsugu](https://www.metmuseum.org/art/collection/search/24975)](https://images.metmuseum.org/CRDImages/aa/original/DT5333.jpg){fig-align="center" height=400 .lightbox}
+
+
+:::
+
+::::
+
+
+# Learning Goals
+
+1. Apply and interpret OLS for Linear Models
+2. Identify and address problems with Linear Models
+
+# Linear Model
+
+:::{.incremental}
+
+1. Used for prediction and inference when response is quantitative.
+2. Applied when the relation bentwen the response and predictor(s) is *assumed* to be close to linear.
+3. A linear model with one predictor is referred to as the Simple Linear model and that with more than one predictors is called *Multiple Linear Model*.
+
+:::
+
+# Simple Linear Model
+
+# Simple Linear Model
+
+:::{.incremental}
+
+- A **perfect** linear relationship is unrealistic for any natural process.
+- So, it is not possible to predict the exact value of $y$ just by knowing $x$.
+- Ex: Family income ($x$) and financial support ($y$) to a student by a college.
+- This doesn't mean one cannot make a *reasonably good* estimate of $y$ using $x$.
+
+:::
+
+# Simple Linear Model
+
+[The relationship between $x$ and $y$ can be modeled as a straight line **with some error**:]{.fragment fragment-index="1"}
+
+[$y = b_0 + b_1x + \epsilon$]{.fragment fragment-index="2" style="text-align: center"}
+
+[$b_0$ is the intercept and $b_1$ is the slope of the line. Error is represented by $\epsilon$]{.fragment fragment-index="3"}
+
+# Possums
+
+```{r}
+#| echo: false
+#| column: body-outset
+
+possum |>
+    kableExtra::kable() |>
+    kableExtra::kable_styling() |>
+    kableExtra::scroll_box(width = "100%", height = "500px")
+```
+
+# Possums
+
+
+```{r}
+#| echo: false
+#| fig-align: center
+#| warning: false
+#| column: body
+
+possum |>
+    ggplot(aes(total_l,head_l)) +
+    geom_point(colour = "steelblue") +
+    geom_smooth(method = "lm",se = F) +
+    labs(
+        x = "Total Length (cm)",
+        y = "Head Lenght (mm)"
+    ) +
+        theme_minimal()
+```
+
+# Possums
+
+[The equation of the line he have is:]{.fragment fragment-index="1"}
+<br><br>
+[$\hat{y} = 42.7 + 0.573x$]{.fragment fragment-index="2"}
+<br><br>
+[For possums of total length 85 cm, we estimate the **average** head length to be: ]{.fragment fragment-index="3"}
+<br><br>
+[$\hat{y} = 42.7 + 0.573*(85) = 91.405$]{.fragment fragment-index="4"}
+
+# Residuals
+
+
+```{r}
+#| echo: false
+#| warning: false
+
+lm(head_l ~ total_l, data = possum) |>
+    broom::augment() |>
+    select(c(1,3,4)) |>
+    kableExtra::kable() |>
+    kableExtra::kable_styling() |>
+    kableExtra::scroll_box(width = "100%", height = "500px")
+```
+
+# Residual
+
+[Formally, we refer to residuals as :]{.fragment fragment-index="1"}
+<br><br>
+[for the $i^{th}$ observation, residual $e_i= y_i - \hat{y}_i$]{.fragment fragment-index="2"}
+
+# DIY-1 {2 mins}
+
+Use the linear model $\hat{y} = 41 + 0.59x$ to compute the residual for the observation (76.0, 85.1).
+
+# DIY-2
+
+If a model underestimates an observation, will the residual be positive or negative?
+
+# Residuals
+
+
+```{r}
+#| echo: false
+#| warning: false
+#| fig-align: center
+
+lm(head_l ~ total_l, data = possum) |>
+    broom::augment() |>
+    ggplot(aes(y=.resid,x=.fitted)) +
+    geom_point(colour = "steelblue") +
+    geom_hline(yintercept = 0, linetype = 2) +
+    labs(
+        x = "Predicted values of head length in mm",
+        y = "Residuals"
+    ) +
+        theme_minimal()
+
+```
+
+# Least Squares
+
+[Provides and Objective measure of finding the best line]{.fragment fragment-index="1"}
+<br><br>
+[A line that has the smallest residuals]{.fragment fragment-index='2'}
+<br><br>
+[$e_1^2 + e_2^2 + ... + e_n^2$]{.fragment fragment-index='3'}
+
+# Interpretation
+
+[For a model:]{.fragment fragment-index='1'}
+<br><br>
+[$\hat{y} = \beta_0 + \beta_1 x$]{.fragment fragment-index='2'}
+<br><br>
+[The slope($\beta_1$) describes the estimated difference in the predicted *average* outcome of $y$ if the predictor variable $x$ happened to be one unit larger.]{.fragment fragment-index='3'}
+<br><br>
+[The intercept describes the *average* outcome of $y$ if $x = 0$]{.fragment fragment-index='4'}
+
+# Extrapolation
+
+```{r}
+#| echo: false
+#| warning: false
+
+
+elmhurst |>
+    kableExtra::kable() |>
+    kableExtra::kable_styling() |>
+    kableExtra::scroll_box(width = '100%', height = '500px')
+```
+
+# Extrapolation
+
+```{r}
+#| echo: true
+#| warning: false
+#| output-location: slide
+#| fig-align: center
+#| column: body
+
+lm(gift_aid ~ family_income,
+    data = elmhurst) |>                                    #<1>
+    broom::augment() |>                                    #<2>
+    ggplot(aes(x = family_income, gift_aid)) +
+    geom_point(colour = "steelblue") +
+    geom_smooth(method = "lm",se = F,linetype =2)+
+    geom_segment(aes(xend = family_income, yend=.fitted),
+    colour = "red", alpha = 0.5) +
+    labs(
+        x = "Family Income in 1000 USD",
+        y = "Gift Aid in 1000 USD"
+    ) +
+        theme_minimal()
+```
+
+1. Regression to estimate gift aid received using family income
+2. use the model to generate data frame for predicted and residual values along with other estimates.
+
+# Extrapolation
+
+
+```{r}
+#| echo: true
+#| warning: false
+
+lm(gift_aid ~ family_income,
+    data = elmhurst) |>                                   
+    broom::tidy() 
+
+```
+
+# extrapolation
+
+> What will be the gift aid received by a student whose Family Income is $1Million?
+<br><br>
+
+$GiftAid = 24.3 - 0.04318FamilyIncome$
+
+<br><br>
+
+$GiftAid = 24.3 - 0.0431 * 1000 = - 18.8$
+
+> Does this meant the student will be penalised $18800?
+
+# Model fit
+
+[$R^2$ is used to describe the strength of the model fit]{.fragment fragment-index='1'}
+<br><br>
+[It is the amount of variance in response explained by the model]{.fragment fragment-index='2'}
+<br><br>
+[$\frac{Var(Gift Aid) - Var(Residuals)}{Var(Gift Aid)}$]{.fragment fragment-index='3'}
+
+# Outliers -Intuitive 
+
+![O1-From IMS 2e](https://openintro-ims.netlify.app/model-slr_files/figure-html/fig-outlier-plots-1.png)
+
+# Outliers -Intuitive
+
+![O2-From IMS 2e](https://openintro-ims.netlify.app/model-slr_files/figure-html/fig-outlier-plots-2.png)
+
+# Outliers -Intuitive
+
+:::{.incremental}
+
+1. Analyse with and without the outliers. Are the results different? Think why?
+2. Present the differneces for discussion.
+3. Do not remove these without good reason.
+
+:::
+
+# High leverage Points
+
+>"Points that fall horizontally away from the center of the cloud tend to pull harder on the line, so we call them points with high leverage or leverage points."
+
+<br><br>
+
+if such points does affect the slope of the line we call these **Influential** points.
+
+## How are these model fits different?
+
+![ex1-ims](https://openintro-ims.netlify.app/model-slr_files/figure-html/unnamed-chunk-14-1.png)
+
+## how would the model fit look for these residual plots?
+
+![ex2-ims](https://openintro-ims.netlify.app/model-slr_files/figure-html/unnamed-chunk-15-1.png)
+
+# Multiple Linear Model
+
+> When many variables are associated with the response at once
+
+# Why do we need *Multiple* Linear Model
+
+Why can't I run several simple liner models?
+
+:::{.incremental}
+
+1. How would you make a single prediction form many simple linear model?
+2. Each simple linear model will ignore other factors that are associated with the response.
+
+:::
+
+# Multiple Linear Model
+
+```{r}
+#| echo: true
+#| column: body
+
+lm(head_l ~ total_l + sex + age , data = possum) |>
+    broom::tidy() |>
+    kableExtra::kable()
+
+```
+
+# Are all the predictors zero?
+
+> F-statistic to the rescue
+
+$F = \frac{(TSS -RSS)/p}{RSS/(n-p-1)}$
+
+But what is large enough? 
+
+# Variable selection
+
+1. Forward Selection
+2. Backward Selection
+
+# Adjusted $R^2$
+
+$R_{adj} ^2 = 1  - \frac{s_{residual}^2/(n-k-1)}{s_{outcome}^2/(n-1)}$
+
+<br><br>
+
+Why not just use $R^2$?
+
+"The adjusted R-squared adjusts for the number of terms in the model. Importantly, its value increases only when the new term improves the model fit more than expected by chance alone. The adjusted R-squared value actually decreases when the term doesn’t improve the model fit by a sufficient amount."
+
+# Prediction
+
+:::{.incremental}
+
+1. $\beta_0, \beta_1,...\beta_p$ are estimates of population parameters. It is related ot the reducible error we talked about in the Bias-variance tradeoff. To address this uncertainty we use *confidence Intervals*. This is how close $\hat{Y}$ is to $f(X)$. 
+
+2. Even if we got perfect estimates of the paramenters, we have to deal with the irreducible error (\epsilon) that is hidden in every realization of $Y$. To indicate this we use *prediction intervals.* This is how much $Y$ vary from $\hat{Y}$.
+
+:::
+
+# Prediction
+
+
+```{r}
+#| echo: true
+
+ predict(lm(head_l ~ total_l, possum), 
+ newdata = tibble(total_l = 85), 
+ interval = "confidence")
+
+ predict(lm(head_l ~ total_l, possum), 
+ newdata = tibble(total_l = 85), 
+ interval = "prediction")
+
+```
+
+## Problems - Non-linear response-predictor realtionship
+
+```{r}
+#| echo: false
+#| warning: false
+#| column: page
+Auto |> 
+    ggplot(aes(horsepower, mpg)) +
+    geom_point(colour = "steelblue") +
+    geom_smooth(method = "lm", se = F) +
+    theme_minimal() 
+```
+
+## Problems - Non-linear response-predictor realtionship
+
+
+```{r}
+#| echo: false
+#| warning: false
+#| column: page
+
+lm(mpg ~ horsepower, Auto) |>
+    broom::augment() |>
+    ggplot(aes(`.fitted`, `.resid`)) +
+    geom_point(colour = "steelblue") +
+    geom_hline(yintercept = 0) +
+    theme_minimal()
+```
+
+## Problems - Non-linear response-predictor realtionship
+
+
+```{r}
+#| echo: false
+#| warning: false
+#| column: page
+
+lm(mpg ~ horsepower + I(horsepower^2), Auto) |> 
+    broom::augment() |>
+    ggplot(aes(`.fitted`, `.resid`)) +
+    geom_point(colour = "steelblue") +
+    geom_hline(yintercept = 0) +
+    theme_minimal()
+```
+
+## Heteroscedasticity - non-constant variance of error terms
+
+![from ISLR](/images/heteroscedasticity.png)
+
+# Exercise
+
+- Use the `duke_forest` data from {openintro}
+- Your goal is to model the price of the house
+- Begin by reading the data documentation
+- Carry out necessary exploratory analyses
+- come up with a model
+- Implement it
+- Carry out diagnostics
+- Tune the model if needed
+
+# Readings
+
+Intro to modern statistics Chapters 7 and 8.
