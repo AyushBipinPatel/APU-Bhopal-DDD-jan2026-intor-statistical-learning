@@ -18,9 +18,12 @@ If we have more time we may also cover one or more of:
 2. RCT
 3. IV
 
+**Lecture Slides**
+
 1. [Lecture Slides](23-01-2026-intro-to-statistical-learning.html): Intro to Statistical 
 Learning.
 2. [Lecture Slides](26-01-2026-linear-regression-refresher.html): Intro to Modern Statistics
+3. [Lecture Slides](28-01-2026-resampling-methods.html): Resampling
 
 Assessment Details
 

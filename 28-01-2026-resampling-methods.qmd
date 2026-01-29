@@ -1,0 +1,690 @@
+---
+title: "Resampling Methods"
+author: "Ayush Patel"
+subtitle: "DDD: Elements of Statistical Machine Learning & Politics of Data"
+institute: "At Azim Premji University, Bhopal"
+date: today
+date-format: "DD MMM, YYYY"
+format: 
+  revealjs:
+    fig-height: 6
+    fig-width: 14
+    embed-resources: true
+    margin-left: 50px
+    margin-right: 50px
+    slide-number: c/t
+    width: 1400
+    height: 850
+    theme: [default, theme.scss]
+    footer: "Email: ayush.ap58@gmail.com"
+---
+
+```{r}
+#| include: false
+#| warning: false
+
+library(tidyverse)
+library(openintro)
+library(ISLR2)
+```
+
+# Hello
+
+::::{.columns}
+
+:::{.column}
+
+[I am Ayush.]{.fragment fragment-index="1" style="font-size:45px"}
+
+[I am a researcher working at the intersection of data, development and economics.]{.fragment fragment-index="2" style="font-size:25px"}
+
+[I am a [RStudio (Posit) certified tidyverse Instructor.](https://education.rstudio.com/trainers/people/patel+ayush/)]{.fragment fragment-index="3" style="font-size:25px"}
+
+[I am a Researcher at [Oxford Poverty and Human development Initiative (OPHI)](https://ophi.org.uk/), at the University of Oxford.]{.fragment fragment-index="4" style="font-size:25px"}
+
+:::
+
+:::{.column}
+
+![[Hello (Eh bonjour– donc–.) by Charles Motte](https://www.metmuseum.org/art/collection/search/392118"Well)](https://images.metmuseum.org/CRDImages/dp/original/DP808141.jpg){fig-align="center" height=400 .lightbox}
+ 
+
+:::
+
+::::
+
+# Did you come prepared?
+
+::::{.columns}
+
+:::{.column}
+- You have installed R. If not see [this link]().
+
+- You have installed RStudio/Positron/VScode or any other IDE. It is recommended that you work through an IDE
+
+- You have the libraries `{tidyverse}  {caret} {ISLR} {ISLR2} {openintro} {broom} {MASS} {nnet} {e1071} {tidymodels}` installed
+
+:::
+
+:::{.column}
+
+![[Armor (Gusoku) Helmet signed by Bamen Tomotsugu](https://www.metmuseum.org/art/collection/search/24975)](https://images.metmuseum.org/CRDImages/aa/original/DT5333.jpg){fig-align="center" height=400 .lightbox}
+
+
+:::
+
+::::
+
+
+# Learning Goals
+
+1. Apply resampling methods for *Model Assessment* (performance)
+2. Apply resampling methods for *Model Selection* (flexiblity)
+
+# Resampling Methods
+
+>The process involves taking several samples from the training data and fitting the model of interest to learn more about the model.
+
+# Motivation
+
+[Training error rates are not the best to gauge the model's performance]{.fragment fragment-index='1'}
+<br><br>
+[Test data is not usually available]{.fragment fragment-index='2'}
+<br><br>
+[But test error rate are better to assess a model's performance]{.fragment fragment-index='3'}
+<br><br>
+[One of the ways to handle this is by using resampling methods to estimate tert error rates]{.fragment fragment-index='4'}
+
+# Validation Set Approach
+
+[Split the observation randomly into *training* and *Validation* set.]{.fragment fragment-index='1'}
+<br><br>
+[Use the *training set* to build/train the model.]{.fragment fragment-index='2'}
+<br><br>
+[Use the model to predict the responses of the *validation set*.]{.fragment fragment-index='3'}
+<br><br>
+[Compare various quality of fit and performance stats using *validation set*]{.fragment fragment-index='4'}
+
+# Data
+
+`Auto` as an example to learn Cross Validation
+
+```{r}
+#| echo: false
+#| warning: false
+
+Auto |>
+    ggplot(aes(horsepower, mpg)) +
+    geom_point(colour = "steelblue") +
+    labs(
+        x = "Horsepower",
+        y = "Miles per gallon"
+    ) +
+        theme_minimal()
+
+```
+
+# Model in question
+
+::::{.columns}
+
+:::{.column}
+```{r}
+#| echo: true
+#| eval: false
+
+lm(mpg ~ horsepower, Auto) |>
+    broom::glance()
+```
+
+```{r}
+#| echo: false
+
+lm(mpg ~ horsepower, Auto) |>
+    broom::glance() |>
+    kableExtra::kable() |>
+    kableExtra::kable_styling() |>
+    kableExtra::scroll_box(width = '100%', height = '250px')
+```
+
+:::
+
+:::{.column}
+
+```{r}
+#| echo: true
+#| eval: false
+lm(mpg ~ poly(horsepower,2), Auto) |>
+    broom::glance()
+```
+
+```{r}
+#| echo: false
+
+lm(mpg ~ poly(horsepower,2), Auto) |>
+    broom::glance() |>
+    kableExtra::kable() |>
+    kableExtra::kable_styling() |>
+    kableExtra::scroll_box(width = '100%', height = '250px')
+```
+
+:::
+
+::::
+
+
+# Model in question
+
+::::{.columns}
+
+:::{.column}
+```{r}
+#| echo: true
+
+ lm(mpg ~ horsepower, Auto) |>
+    broom::augment() |> 
+    summarise(mse = mean(.resid ^2))
+```
+
+:::
+
+:::{.column}
+
+```{r}
+#| echo: true
+
+lm(mpg ~ poly(horsepower,2), Auto) |>
+    broom::augment() |> 
+    summarise(mse = mean(.resid ^2))
+
+```
+
+:::
+
+::::
+
+# Model in question
+
+[Selection: Would models with more flexibility prove better?]{.fragment fragment-index='1'}
+<br><br>
+[Performance: Does the second model have better MSE? Will this be true for any sample?]{.fragment fragment-index='2'}
+
+
+
+# Validatoin Set Approach 
+
+**Split sample in training and Validation set**
+
+```{r}
+#| echo: true
+
+rsample::initial_split(Auto,prop = .5) -> Auto_split 
+
+Auto_split
+
+Auto_train <- rsample::training(Auto_split)
+
+Auto_validation_set <- rsample::testing(Auto_split)
+```
+
+# validation Set Approach
+
+**Train model using training data**
+
+
+```{r}
+#| echo: true
+
+lm(mpg ~  poly(horsepower,3), Auto_train) -> trained_model
+
+head(predict(trained_model, Auto_validation_set))
+
+tibble(
+    y = Auto_validation_set$mpg,
+    y_hat = predict(trained_model, Auto_validation_set),
+    resid_sqr = (y - y_hat)^2
+) |>
+    summarise(mse = mean(resid_sqr, na.rm = T))
+
+```
+
+# Validation Set Approach
+
+**Get MSE for all powers from 2 to 10**
+
+```{r}
+#| echo: true
+
+# define a funciton
+
+get_mse <- function(pow){
+
+    # train the model - using trainging data
+    lm(mpg ~ poly(horsepower,pow), Auto_train) -> trained_model
+
+    # get mse
+    tibble(
+        y = Auto_validation_set$mpg,
+        y_hat = predict(trained_model, Auto_validation_set),
+        resid_sqr = (y - y_hat)^2
+    ) |>
+        summarise(mse = mean(resid_sqr, na.rm = T)) |>
+        pull(mse) -> mse
+
+    # Store appropriately
+
+    tibble(
+        pow_flexibility = pow,
+        mse = mse
+    )
+
+}
+
+```
+
+# Validation set Approach
+
+**Get MSE for all powers of 1 to 10**
+
+
+```{r}
+#| echo: true
+#| output-location: slide
+map(
+    c(1:10),
+    get_mse
+) |>
+    list_rbind() |>
+    ggplot(aes(pow_flexibility,mse))+
+    geom_point()+
+    geom_line()+
+    labs(
+    x = "Flexibility",
+    y = "MSE"
+    )+
+    theme_minimal()
+```
+
+# What happens if the sample changes
+
+> For each power (level of flexibility) I run the model 10 times.
+
+# Validation Set Approach
+
+**adjust funciton to split every time when executed**
+
+```{r}
+#| echo: true
+
+get_mse_spread <- function(pow){
+
+    # repeats split for every iteration
+
+    rsample::initial_split(Auto,prop = .5) -> Auto_split 
+
+    Auto_train <- rsample::training(Auto_split)
+
+    Auto_validation_set <- rsample::testing(Auto_split)
+
+    # train the model - using trainging data
+    lm(mpg ~ poly(horsepower,pow), Auto_train) -> trained_model
+
+    # get mse
+    tibble(
+        y = Auto_validation_set$mpg,
+        y_hat = predict(trained_model, Auto_validation_set),
+        resid_sqr = (y - y_hat)^2
+    ) |>
+        summarise(mse = mean(resid_sqr, na.rm = T)) |>
+        pull(mse) -> mse
+
+    # Store appropriately
+
+    tibble(
+        pow_flexibility = pow,
+        mse = mse
+    )
+
+    
+}
+```
+
+# Validation Set Approach
+
+**Execute 10 times for every power to get mse spread**
+
+
+```{r}
+#| echo: true
+#| output-location: slide
+
+map(
+    rep(c(1:10),10) |> sort(),
+    get_mse_spread
+) |>
+    list_rbind() |> 
+    mutate(
+        iteration = rep(letters[1:10],10)
+    ) |>
+    ggplot(aes(pow_flexibility,mse, colour = iteration))+
+    geom_point()+
+    geom_line(aes(group = iteration))+
+    labs(
+    x = "Flexibility",
+    y = "MSE"
+    )+
+    theme_minimal() +
+    theme(
+        legend.position = "none"
+    )
+
+
+```
+
+# Validation Set Approach
+
+**Potential Problems**
+
+[Validation set estimate of test MSE can be highly variable]{.fragment fragment-index='1'}
+<br><br>
+[Does not do well when number of observation are fewer. We end up not using all informaiton that we have to train the model. It might overestimate the test error rate.]{.fragment fragment-index='2'}
+
+# Leave-one-out Cross-Validation
+
+[Addresses the issue with Validation Set Approach, but is computationally costly.]{.fragment fragment-index='1'}
+<br><br>
+[For a data set of `n` observations, the model is fit `n` times using.]{.fragment fragment-index='2'}
+<br><br>
+[The model is fit using `n-1` observations  as training data in a manner where each observation is left out of the training data exactly once.]{.fragment fragment-index='3'}
+<br><br>
+[Test MSE is estimated using the error rates of all the left out observation predictions.]{.fragment fragment-index='4'}
+
+# Leave-one-out Cross-Validation
+
+**Begin by creating the splits**
+
+
+```{r}
+#| echo: true
+
+rsample::loo_cv(Auto) -> Auto_loocv_split
+
+Auto_loocv_split
+
+```
+
+# Leave-one-out Cross-Validation
+
+**Function to Fit model on every training split and get error for each test observation**
+
+
+```{r}
+#| echo: true
+get_error_obs <- function(split,pow){
+
+    Auto_loocv_train <- rsample::training(Auto_loocv_split$splits[[split]])
+
+    Auto_loocv_test <- rsample::testing(Auto_loocv_split$splits[[split]])
+
+    mod <- lm(mpg ~ poly(horsepower,pow),data = Auto_loocv_train)
+
+    broom::augment(mod, newdata = Auto_loocv_test) |>
+        select(
+            mpg, `.fitted`,`.resid`
+        ) |>
+            mutate(
+                split = split,
+                pow = pow
+            )
+
+}
+```
+
+# Leave-one-out Cross-Validation
+
+**Execute Function to get errors for all test obs.**
+
+
+```{r}
+#| echo: true
+#| cache: true
+#| output-location: slide
+
+pmap(
+    list(
+        split = rep(c(1:391),10),
+        pow = rep(c(1:10),391) |> sort()
+    ),
+    get_error_obs
+) |>
+    list_rbind() -> error_obs_tab
+
+error_obs_tab |>
+    kableExtra::kable() |>
+    kableExtra::kable_styling() |>
+    kableExtra::scroll_box(width = '100%', height = '500px')
+
+
+```
+
+# Leave-one-out Cross-Validation
+
+**Get MSE for all levels of flexibility (power)**
+
+
+```{r}
+#| echo: true
+#| output-location: slide
+
+error_obs_tab |>
+    group_by(pow) |>
+    summarise(
+        mse = mean(`.resid`^2, na.rm = T)
+    )|>
+    ggplot(aes(pow,mse),colour = "blue")+
+    geom_point()+
+    geom_line()+
+    labs(
+    x = "Flexibility",
+    y = "MSE"
+    )+
+    theme_minimal()
+
+```
+
+# Leave-one-out Cross-Validation
+
+[LooCV is less biased than the Validation set approach as it uses almost all the data to train the model.]{.fragment fragment-index='1'}
+<br><br>
+[Test error rate estimates of LooCV are not as spread out as provided by validation set approach as it does not get affected by randomness of splits.]{.fragment fragment-index='2'}
+<br><br>
+[Though it is expensive to use computationally, especially for data that is large.]{.fragment fragment-index='3'}
+
+# k-Fold Cross-Validation
+
+[k-Fold CV addresses the computational issue with LooCV, LooCV is a soecial case of k-fold]{.fragment fragment-index='1'}
+<br><br>
+[The data is split in `k` parts, all parts should be nearly equal.]{.fragment fragment-index='2'}
+<br><br>
+[The first part is used as a Validation set, model is fit on the remaining `k-1` parts.]{.fragment fragment-index='3'}
+<br><br>
+[This is repeated till each of the `k` parts have been used as the validation set.]{.fragment fragment-index='4'}
+<br><br>
+[Test error rate is estimated as the average of all k validation set error rates.]{.fragment fragment-index='5'}
+
+# k-Fold Cross-Validation
+
+**Begin by creating the splits**
+
+```{r}
+#| echo: true
+
+rsample::vfold_cv(Auto,v = 10) -> Auto_kfold_splits
+
+Auto_kfold_splits
+```
+
+# k-Fold Cross-Validation
+
+**Function to get $MSE_{k}$**
+
+```{r}
+#| echo: true
+
+get_k_mse <- function(k,pow){
+
+    Auto_ktrain <- rsample::training(Auto_kfold_splits$splits[[k]])
+
+    Auto_ktest <- rsample::testing(Auto_kfold_splits$splits[[k]])
+
+    mod<- lm(mpg ~ poly(horsepower,pow), Auto_ktrain)
+
+    tibble(
+        k = k,
+        pow = pow,
+        k_mse = broom::augment(
+            mod,
+            newdata = Auto_ktest
+            ) |>
+            summarise(
+                mse = mean(`.resid`^2, na.rm=T)
+            ) |>
+                pull(mse)
+
+    )
+
+}
+```
+
+# k-Fold Cross-Validation
+
+**Execute function to get $CV_k$ at different powers**
+
+
+```{r}
+#| echo: true
+#| output-location: slide
+
+pmap(
+    list(
+        k = rep(c(1:10),10),
+        pow = rep(c(1:10),10) |> sort()
+    ),
+
+    get_k_mse
+) |>
+    list_rbind() |>
+    group_by(pow) |>
+    summarise(
+        mse = mean(k_mse, na.rm = T)
+    ) |>
+    ggplot(aes(pow,mse),colour = "blue")+
+    geom_point()+
+    geom_line()+
+    labs(
+    x = "Flexibility",
+    y = "MSE"
+    )+
+    theme_minimal()
+
+```
+
+# k-Fold Cross-Validation
+
+**Create 10 reps of the k-fold split**
+
+```{r}
+#| echo: true
+
+rsample::vfold_cv(Auto,v = 10, repeats = 100)-> Auto_kfold_splits_100reps
+
+Auto_kfold_splits_100reps
+
+```
+
+# k-Fold Cross-Validation
+
+**Function to Repeat the process for every power(1:10) 10 times**
+
+```{r}
+#| echo: true
+
+get_k_repeats_mse <- function(itr, pow){
+    
+    Auto_ktrain <- rsample::training(Auto_kfold_splits_100reps$splits[[itr]])
+
+    Auto_ktest <- rsample::testing(Auto_kfold_splits_100reps$splits[[itr]])
+
+    mod <- lm(mpg ~ poly(horsepower,pow), Auto_ktrain)
+
+    broom::augment(mod, newdata = Auto_ktest) |>
+        select(`.resid`) |>
+        mutate(
+            pow = pow,
+            rep = Auto_kfold_splits_100reps$id[itr],
+            fold = Auto_kfold_splits_100reps$id2[itr]
+        )  
+
+}
+
+```
+
+# k-Fold Cross-Validation
+
+```{r}
+#| echo: true
+#| output-location: slide
+
+pmap(
+    list(
+        itr = c(1:1000),
+        pow = rep(c(1:10),100) |> sort()
+    ),
+    get_k_repeats_mse
+) |>
+    list_rbind() |> 
+    group_by(rep,fold,pow)|>
+    summarise(
+        mse = mean(`.resid`^2, na.rm = T)
+    ) |> 
+        ungroup()|>
+        group_by(rep,pow)|>
+        summarise(
+        mse = mean(mse, na.rm = T)
+        ) |> 
+    ungroup()|> 
+    ggplot(aes(pow,mse,colour = rep))+
+    geom_point()+
+    labs(
+    x = "Flexibility",
+    y = "MSE"
+    )+
+    theme_minimal() +
+    theme(
+        legend.position = "none"
+    )
+
+```
+
+# k-Fold Cross-Validation
+
+[k-Fold CV is the practical choice for most methods.]{.fragment fragment-index='1'}
+<br><br>
+[It balances the bias problem of validation set approach and the computational constraint of the LooCV]{.fragment fragment-index='2'}
+<br><br>
+[Due to the Bias-Variance trade-off it offers better estimation of test error rate compared to LooCV]{.fragment fragment-index='3'}
+
+# Appling CV using {boot}
+
+
+```{r}
+#| echo: true
+
+glm.fit <- glm(mpg ~ poly(horsepower,2), data = Auto)
+
+boot::cv.glm(Auto, glm.fit, K = 10)$delta
+
+
+```
+
+# The Bootstrap
