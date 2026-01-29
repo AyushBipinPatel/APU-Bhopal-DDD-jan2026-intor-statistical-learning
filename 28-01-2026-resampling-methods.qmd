@@ -687,4 +687,19 @@ boot::cv.glm(Auto, glm.fit, K = 10)$delta
 
 ```
 
-# The Bootstrap
+# Exrcise
+
+> Get the k-fold MSE for the model you built for housing prices. Comapre it with the training MSE. 
+
+# Exercise
+
+Perform a complete analyses cycle on the `College` data from {ISLR2}.
+
+carry out:
+
+1. Study the data documentation
+2. Exploratory and Descriptive Analyses
+3. Develop a theory that you think dictates the response (number of applicaitons received) variable
+4. build a model
+5. perform model diagnostics
+6. compare the training mse with the k-fold CV mse
