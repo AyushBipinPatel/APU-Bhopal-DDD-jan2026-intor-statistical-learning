@@ -211,7 +211,7 @@ lm(mpg ~ poly(horsepower,2), Auto) |>
 
 
 
-# Validatoin Set Approach 
+# validation Set Approach 
 
 **Split sample in training and Validation set**
 
@@ -687,7 +687,7 @@ boot::cv.glm(Auto, glm.fit, K = 10)$delta
 
 ```
 
-# Exrcise
+# Exercise
 
 > Get the k-fold MSE for the model you built for housing prices. Comapre it with the training MSE. 
 
@@ -703,3 +703,263 @@ carry out:
 4. build a model
 5. perform model diagnostics
 6. compare the training mse with the k-fold CV mse
+
+# The Bootstrap - Motivation
+
+**We revist one of the major questions of statistics**
+<br><br>
+> How to estimate a populaiton parameter using a sample statistic
+
+<br><br>
+
+Confidence Intervals are used to define the uncertainity around the estimate.
+
+# The Bootstrap - Motivation
+
+**Utopia**
+<br><br>
+ One way to do this is by taking many samples to generate the statistic of interest and measure the variability of the statistic. This can give a good sense of the variability of the original statistic. 
+
+# The Bootstrap - Motivation
+
+**Trouble in Paradise**
+<br><br>
+
+1. Sampling data is not cheap
+2. neither is it possible to take repeated samples form a populaiton
+
+# The Bootstrap
+
+**Joy to the world**
+
+> We sample from the sample, repeatedly with replacement, instead of sampling from the population.This is bootstraping.
+
+# The Bootstrap
+
+Used in scenarios where goal is to estimate the unknown value of a population parameter and the data is generated from random sampling from a population.
+<br><br>
+Especially useful when there is no simple theory on how a statistic changes from sample to sample. Bootstrapping provides a computational approach instead of a mathematical theory route.
+
+# The Bootstrap - Intuition and Practice
+
+
+![From IMS2e](https://openintro-ims.netlify.app/images/boot1propboth.png)
+
+# The Bootstrap - Medical Consultant
+
+**Context**
+<br><br>
+
+> A consultant tried to attract clients by mentioning that average complicaiton rate for liver donor surgeries in the US is 10%. However, only 3 of her 62 clients have had complications. 
+<br><br>
+
+**should she be hired?**
+
+# The Bootstrap - Medical Consultant
+
+Let us denote her true populaiton complication rate as $p$
+<br><br>
+Let $\hat{p}$ be the estimate of $p$. From the observed sample $\hat{p} = 3/62 = 0.048$
+
+# The Bootstrap - Medical Consultant
+
+**Caution: this is not an assessment of a causal claim**
+
+We cant prove/assess from the given data that the consultant's involvement reduces the complicaiton rates.
+<br><br>
+We can only estimate the population complication parameter for her work.
+
+# The Bootstrap - Medical Consultant
+
+```{r}
+#| echo: true
+
+observed_sample <- c(rep(1,3), rep(0,59))      #<1>
+
+sample(
+    x = observed_sample,
+    size = length(observed_sample),
+    replace = T
+    )                                          #<2>
+```
+
+1. Create the observed smaple with code. 3 complications represented as 1 and no complications represented as 0.
+
+2. Draw a bootstrap resample with replacement of the same size
+
+# The Bootstrap - Medical Consultant
+
+
+```{r}
+#| echo: true
+
+map_vec(                                 # <1>
+    c(1:10000),                          # <2>
+    ~ sample(                            # <3>
+        observed_sample,
+        length(observed_sample),
+        replace = T
+    ) |>
+        mean()                           # <4>
+)  -> bootstrap_resample_complication_rates
+
+bootstrap_resample_complication_rates |> head()
+```
+
+1. `map` funciton allows to repeat a set of code
+2. Number of times I want to run the code in step 3 
+3. Code to create a bootstrap resample
+4. Take mean to get complication rate for each bootstrap resample
+
+# The Bootstrap - Medical Consultant
+
+```{r}
+#| echo: true
+#| output-location: slide
+
+tibble(
+    com_est = bootstrap_resample_complication_rates
+    ) |>
+        ggplot(aes(com_est)) + 
+        geom_histogram(aes(fill = 
+        ifelse(
+            com_est > quantile(bootstrap_resample_complication_rates, 
+                    0.025
+                    ) &
+                    com_est < quantile(bootstrap_resample_complication_rates, 
+                    0.975
+                    ),
+            "lightblue",
+            "steelblue"
+        ))) +
+        scale_fill_identity()+
+        geom_vline(
+            aes(
+                xintercept = 
+                    quantile(bootstrap_resample_complication_rates, 
+                    0.025
+                    )
+                )
+            )+
+        geom_vline(
+            aes(
+                xintercept = 
+                    quantile(bootstrap_resample_complication_rates, 
+                    0.975
+                    )
+                )
+            )+
+        labs(
+        x = "Bootstrap sample estimates of compication rates",
+        y = "Count",
+        title = "10,000 Bootstrapped Proportoins"
+        ) +
+        theme_minimal() +
+        theme(
+            legend.position = "none",
+            plot.title.position = "plot"
+        ) 
+```
+
+## Side note on getting quantile values
+
+```{r}
+#| echo: true
+
+quantile(bootstrap_resample_complication_rates, 0.10)
+
+sort(bootstrap_resample_complication_rates)[round(length(bootstrap_resample_complication_rates) *0.10)]
+
+
+```
+
+# Exercise
+
+> You wish to estimate the proportion of videos on youtube that are shot outdoors. (Any video, in full or in part that is shot outdoors)
+
+<br><br>
+
+You take a random sample of 128 videos and find that 47 of these are shout outdoors.
+
+Bootstrap the smaple to and calcualte the statistic for interest for each sample. The create a 90% confidence interval. What should be the point estimate?
+
+# Bootstrap - paried mean diff
+
+**Is the difference in prices real ?**
+
+```{r}
+#| echo: false
+#| 
+ucla_textbooks_f18 |> 
+    select(amazon_new,bookstore_new) |>
+    filter(!is.na(amazon_new) & !is.na(bookstore_new)) |>
+    kableExtra::kable() |>
+    kableExtra::kable_styling() |>
+    kableExtra::scroll_box(width = '100%', height = '500px')
+
+ucla_textbooks_f18 |> 
+    select(amazon_new,bookstore_new) |>
+    filter(!is.na(amazon_new) & !is.na(bookstore_new)) -> book_prices
+
+```
+
+# Bootstrap - paired mean diff
+
+```{r}
+#| echo: true
+#| output-location: slide
+    
+book_prices|>
+    mutate(
+    diff = bookstore_new - amazon_new
+    ) |>
+    pull(diff) -> diff
+
+
+map_vec(
+    c(1:1000),
+    ~sample(
+        diff,
+        length(diff),
+        T
+    )|>
+        mean()
+) -> mean_diffs
+
+
+quantile(mean_diffs, 0.005) -> l_ci_p
+quantile(mean_diffs, 0.995) -> u_ci_p
+
+mean(mean_diffs) - 2.58*sd(mean_diffs) -> l_ci_se
+mean(mean_diffs) + 2.58*sd(mean_diffs) -> u_ci_se
+
+tibble(
+    x = mean_diffs
+) |>
+    ggplot(aes(x)) +
+    geom_histogram(fill = "steelblue", colour = "white") +
+    geom_vline(aes(xintercept = l_ci_p),
+    linetype = 2, colour = "lightblue")+
+    geom_vline(aes(xintercept = u_ci_p),
+    linetype = 2, colour = "lightblue")+
+    geom_vline(aes(xintercept = l_ci_se),
+    linetype = 3, colour = "red")+
+    geom_vline(aes(xintercept = u_ci_se),
+    linetype = 3, colour = "red")+
+    labs(
+        x = "Bootstarp means of difference in prices",
+        y = "Count",
+        title = "1000 Bootstrap Means Distribution",
+        subtitle = "red lines are SE CI and blue lines are percentile CI"
+    ) +
+    theme_minimal() +
+    theme(
+            plot.title.position = "plot"
+        ) 
+
+```
+
+# Readings
+
+ISLR CH5: 5.1, 5.3.1 - 5.3.3<br><br>
+IMS: CH12, CH21.2 and realted exercise
