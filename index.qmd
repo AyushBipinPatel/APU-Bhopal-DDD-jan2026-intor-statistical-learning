@@ -24,6 +24,7 @@ If we have more time we may also cover one or more of:
 Learning.
 2. [Lecture Slides](26-01-2026-linear-regression-refresher.html): Intro to Modern Statistics
 3. [Lecture Slides](28-01-2026-resampling-methods.html): Resampling
+4. [Lecture Slides](12-02-2026-decision-trees-emsemble-methods.html): Decision Trees and Ensemble Methods
 
 Assessment Details
 
