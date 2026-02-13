@@ -1,0 +1,352 @@
+---
+title: "Decision trees and Ensemble Methods"
+author: "Ayush Patel"
+subtitle: "DDD: Elements of Statistical Machine Learning & Politics of Data"
+institute: "At Azim Premji University, Bhopal"
+date: today
+date-format: "DD MMM, YYYY"
+format: 
+  revealjs:
+    fig-height: 6
+    fig-width: 14
+    embed-resources: true
+    margin-left: 50px
+    margin-right: 50px
+    slide-number: c/t
+    width: 1400
+    height: 850
+    theme: [default, theme.scss]
+    footer: "Email: ayush.ap58@gmail.com"
+---
+
+```{r}
+#| include: false
+#| warning: false
+
+library(tidyverse)
+library(tidymodels)
+library(openintro)
+library(ISLR2)
+library(tree)
+library(randomForest)
+library(gbm)
+library(BART)
+library(palmerpenguins)
+```
+
+# Hello
+
+::::{.columns}
+
+:::{.column}
+
+[I am Ayush.]{.fragment fragment-index="1" style="font-size:45px"}
+
+[I am a researcher working at the intersection of data, development and economics.]{.fragment fragment-index="2" style="font-size:25px"}
+
+[I am a [RStudio (Posit) certified tidyverse Instructor.](https://education.rstudio.com/trainers/people/patel+ayush/)]{.fragment fragment-index="3" style="font-size:25px"}
+
+[I am a Researcher at [Oxford Poverty and Human development Initiative (OPHI)](https://ophi.org.uk/), at the University of Oxford.]{.fragment fragment-index="4" style="font-size:25px"}
+
+:::
+
+:::{.column}
+
+![[Hello (Eh bonjour– donc–.) by Charles Motte](https://www.metmuseum.org/art/collection/search/392118"Well)](https://images.metmuseum.org/CRDImages/dp/original/DP808141.jpg){fig-align="center" height=400 .lightbox}
+ 
+
+:::
+
+::::
+
+# Did you come prepared?
+
+::::{.columns}
+
+:::{.column}
+- You have installed R. If not see [this link]().
+
+- You have installed RStudio/Positron/VScode or any other IDE. It is recommended that you work through an IDE
+
+- You have the libraries `{tree} {gbm} {randomForest} {BART}` installed
+
+:::
+
+:::{.column}
+
+![[Armor (Gusoku) Helmet signed by Bamen Tomotsugu](https://www.metmuseum.org/art/collection/search/24975)](https://images.metmuseum.org/CRDImages/aa/original/DT5333.jpg){fig-align="center" height=400 .lightbox}
+
+
+:::
+
+::::
+
+
+# Learning Goals
+
+1. What are decision trees?
+2. When to use them?
+3. How do these work?
+4. Application and interpretation.
+4. Improving decision trees using ensemble methods.
+
+# Decision Trees
+
+<br>
+[Supervised and non-parametric]{.fragment fragment-index='1'}
+<br><br>
+[Can be used for Classification and Regression]{.fragment fragment-index='2'}
+<br><br>
+[A predictor space is cut into segments and mean response of training observations is used as the estimate of response of test observations.]{.fragment fragment-index='3'}
+<br><br>
+[Simple, easy to interpret but not the *best* for prediction accuracy on its own]{.fragment fragment-index='4'}
+<br><br>
+[Prediction accuracy can be improved by ensemble methods]{.fragment fragment-index='5'}
+
+# Intuition - How it works
+
+```{r}
+#| echo: false
+#| fig-cap: Can you Identify regions with similar salary range?
+
+
+Hitters |>
+    ggplot(aes (y = Hits, x = Years)) +
+    geom_point(aes(colour = Salary), size = 3) +
+    guides(colour = guide_colourbar(barwidth = unit(15, "cm"), 
+    barheight = unit(1, "cm")))+
+    colorspace::scale_color_continuous_divergingx(
+        palette = "RdYlBu",
+        name = "Salary Quantiles",
+        breaks = ~ quantile(.x, na.rm=T))+
+    labs(
+        y = "X1: Number of hits in the previous season",
+        x = "X2: Number of years in the league",
+        title = "Predictor Space"
+    )+
+    theme_minimal() +
+    theme(
+        plot.title.position = "plot",
+        legend.position = "top",
+        legend.title.position = "top",
+        legend.direction = "horizontal"
+    )
+
+```
+
+# Intuition - How it works
+
+```{r}
+#| echo: false
+#| fig-cap: Can you Identify regions with similar salary range?
+
+
+Hitters |>
+    ggplot(aes (y = Hits, x = Years)) +
+    geom_point(aes(colour = Salary), size = 3) +
+    geom_vline(aes(xintercept = 4.8)) +
+    guides(colour = guide_colourbar(barwidth = unit(15, "cm"), 
+    barheight = unit(1, "cm")))+
+    colorspace::scale_color_continuous_divergingx(
+        palette = "RdYlBu",
+        name = "Salary Quantiles",
+        breaks = ~ quantile(.x, na.rm=T))+
+    labs(
+        y = "X1: Number of hits in the previous season",
+        x = "X2: Number of years in the league",
+        title = "Predictor Space"
+    )+
+    theme_minimal() +
+    theme(
+        plot.title.position = "plot",
+        legend.position = "top",
+        legend.title.position = "top",
+        legend.direction = "horizontal"
+    )
+
+```
+
+# Intuition - How it works
+
+```{r}
+#| echo: false
+#| fig-cap: Can you Identify regions with similar salary range?
+
+
+Hitters |>
+    ggplot(aes (y = Hits, x = Years)) +
+    geom_point(aes(colour = Salary), size = 3) +
+    geom_vline(aes(xintercept = 4.8)) +
+    annotate(geom = "segment",x = 4.8, y = 125, xend = 25, yend = 125) + 
+    guides(colour = guide_colourbar(barwidth = unit(15, "cm"), 
+    barheight = unit(1, "cm")))+
+    colorspace::scale_color_continuous_divergingx(
+        palette = "RdYlBu",
+        name = "Salary Quantiles",
+        breaks = ~ quantile(.x, na.rm=T))+
+    labs(
+        y = "X1: Number of hits in the previous season",
+        x = "X2: Number of years in the league",
+        title = "Predictor Space"
+    )+
+    theme_minimal() +
+    theme(
+        plot.title.position = "plot",
+        legend.position = "top",
+        legend.title.position = "top",
+        legend.direction = "horizontal"
+    )
+
+```
+
+# Intuition - How it works
+
+```{r}
+#| echo: false
+#| fig-cap: Can you Identify regions with similar salary range?
+
+
+Hitters |>
+    ggplot(aes (y = Hits, x = Years)) +
+    geom_point(aes(colour = Salary), size = 3) +
+    geom_vline(aes(xintercept = 4.8)) +
+    annotate(geom = "segment",x = 4.8, y = 125, xend = 25, yend = 125) + 
+    annotate(geom = "text",x = 2.5, y = 125, 
+    label = "R1", colour = "red", alpha = 0.3, size = 20) + 
+    annotate(geom = "text",x = 15, y = 200, 
+    label = "R3", colour = "red", alpha = 0.3, size = 20) + 
+    annotate(geom = "text",x = 15, y = 50, 
+    label = "R2", colour = "red", alpha = 0.3, size = 20) + 
+    guides(colour = guide_colourbar(barwidth = unit(15, "cm"), 
+    barheight = unit(1, "cm")))+
+    colorspace::scale_color_continuous_divergingx(
+        palette = "RdYlBu",
+        name = "Salary Quantiles",
+        breaks = ~ quantile(.x, na.rm=T))+
+    labs(
+        y = "X1: Number of hits in the previous season",
+        x = "X2: Number of years in the league",
+        title = "Predictor Space"
+    )+
+    theme_minimal() +
+    theme(
+        plot.title.position = "plot",
+        legend.position = "top",
+        legend.title.position = "top",
+        legend.direction = "horizontal"
+    )
+
+```
+
+# Model output - Predictor Space
+
+![from ISLR](images/hitters-prercitor-space-model.png)
+
+#  Model output - Tree
+
+![from ISLR](images/tree-simple-hitters.png)
+
+# Region representation
+
+<br><br>
+
+[$R1 = \left\{X|Years<4.5\right\}$]{.fragment fragment-index='1'}
+<br><br>
+[$R2 = \left\{X|Years>=4.5,Hits<117.5\right\}$]{.fragment fragment-index='2'}
+<br><br>
+[$R2 = \left\{X|Years>=4.5,Hits>=117.5\right\}$]{.fragment fragment-index='3'}
+
+# Tree terminology
+
+![from ISLR](images/tree-simple-hitters-terminology.png)
+
+# How *should* we carry out segmenting of predictor space?
+
+# Segmenting - Theory
+
+[Predictor Space of $p$ variables needs to be segmented into $J$ different regions.]{.fragment fragment-index='1'}
+<br><br>
+[**In theory**, the regions can be of any shape, however high-dimensional rectangles are chosen in practice for computational ease and interpretability]{.fragment fragment-index='2'}
+<br><br>
+[For every observation in region $R_j$, we make the same prediction. Mean or mode of the training observations in region $R_j$]{.fragment fragment-index='3'}
+<br><br>
+[Minimize: $\sum_{j=1}^{J}{\sum_{i \in R_j}{(y_i - \hat{y}_{R_j})^2}}$]{.fragment fragment-index='4'} 
+
+# But 
+
+[Not easy to consider all possible cutpoints for all possible predictors with all possible sequences]{.fragment fragment-index='1'}
+<br><br>
+[We use high-dimensional rectangles instead of any shape for ease of interpretation.]{.fragment fragment-index='2'}
+
+# So, use Recursive Binary splitting
+
+[*top-down*]{.fragment fragment-index='1'}
+<br><br>
+[**greedy**]{.fragment fragment-index='2'}
+
+# top-down
+
+<br><br>
+
+> We brgin at the point where all observations are part of the same region. Hence the name *top-down*
+
+# Greedy
+
+<br><br>
+
+> *Best split at a particular step.* We do not care about the future. A predictor $p$ and a cutpoint $s$ is chosen based on which split will lead to the lowest RSS.
+
+This is carried out recursively, over and over again.
+
+# Formally
+
+We aim to minimize the following at every step
+<br><br>
+
+
+> $\sum_{i:x_i \in R_1 (j,s)}{(y_i - \hat{y}_{R_1})^2} + \sum_{i:x_i \in R_2 (j,s)}{(y_i - \hat{y}_{R_2})^2}$
+
+
+# Fitting Regresison Trees
+
+```{r}
+#| echo: true
+
+tree(body_mass_g ~ ., data = penguins) -> peng_mass_tree
+
+peng_mass_tree
+```
+
+# Fitting Regression Trees
+
+
+```{r}
+#| echo: true
+
+summary(peng_mass_tree)
+```
+
+# Fitting Regression Trees
+
+
+```{r}
+#| echo: true
+
+plot(peng_mass_tree)
+text(peng_mass_tree, pretty = 0)
+
+```
+
+# Fitting Regression Trees
+
+
+```{r}
+#| echo: true
+
+na.omit(penguins) |>
+    mutate(
+        pred_mass = predict(peng_mass_tree)
+    ) |>
+        relocate(body_mass_g, pred_mass, everything())
+```
+
