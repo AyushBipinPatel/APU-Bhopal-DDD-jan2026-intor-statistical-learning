@@ -306,6 +306,9 @@ We aim to minimize the following at every step
 
 > $\sum_{i:x_i \in R_1 (j,s)}{(y_i - \hat{y}_{R_1})^2} + \sum_{i:x_i \in R_2 (j,s)}{(y_i - \hat{y}_{R_2})^2}$
 
+# Fitting Regresison Trees
+
+![from {palmerpenguins} website](https://allisonhorst.github.io/palmerpenguins/articles/examples_files/figure-html/unnamed-chunk-7-1.png)
 
 # Fitting Regresison Trees
 
@@ -315,6 +318,22 @@ We aim to minimize the following at every step
 tree(body_mass_g ~ ., data = penguins) -> peng_mass_tree
 
 peng_mass_tree
+```
+
+# Fitting Regression Trees
+
+```{r}
+#| echo: true
+
+peng_mass_tree$frame
+```
+
+# Fitting Regression Trees
+
+```{r}
+#| echo: true
+
+peng_mass_tree$where
 ```
 
 # Fitting Regression Trees
@@ -350,3 +369,145 @@ na.omit(penguins) |>
         relocate(body_mass_g, pred_mass, everything())
 ```
 
+# Do it yourself
+
+<br>
+Run the linear model using the penguins data:
+<br>
+$bodymass = species + sex$
+<br>
+compare the RSS for the linear model with the RSS of the decision tree.
+
+# Cant just keep splitting
+
+<br>
+some terminal nodes have very few observations
+<br>
+
+```{r}
+tree(Salary ~ ., data = Hitters) -> sal_hit_tree
+
+sal_hit_tree
+```
+
+# Cant just keep splitting
+
+```{r}
+#| echo: false
+tree(Salary ~ ., data = Hitters) -> sal_hit_tree
+
+plot(sal_hit_tree)
+text(sal_hit_tree, pretty = 0)
+
+```
+
+# So, when to stop
+<br>
+[The recursive splitting approach is likely to overfit]{.fragment fragment-index='1'}
+<br><br>
+[Leads to a complex tree]{.fragment fragment-index='2'}
+<br><br>
+[A realtively smaller tree can avoid overfitting via lower variance. Providing better interpretation at the cost of little bias]{.fragment fragment-index='3'}
+<br><br>
+[One could say that we split only if reduction in RSS is larger than some value. But this can be short sighted]{.fragment fragment-index='4'}
+
+# So what to do
+<br>
+[Grow the full Tree.]{.fragment fragment-index='1'}
+<br><br>
+[Prune it back to a smaller subtree]{.fragment fragment-index='2'}
+<br><br>
+[*But which is the best subtree*]{.fragment fragment-index='3'}
+<br><br>
+[Well, intuitively, one that leads to the lowest test error rate]{.fragment fragment-index='4'}
+
+# Finding the best subtree
+
+<br>
+[We can use cross-validation to estimate test error rate]{.fragment fragment-index='1'}
+<br><br>
+[But there can be so many subtrees]{.fragment fragment-index='2'}
+<br><br>
+[So, we can select some small number of trees using cost complexity pruning or weakest link pruning]{.fragment fragment-index='3'}
+
+# Cost Complexity Pruning
+
+<br><br>
+
+$\sum_{m=1}^{|T|}{\sum_{i:x_i \in R_m}{(y_i - \hat{y}_{R_m})^2}} + \alpha |T|$
+
+# The Combined Algorithm
+
+1. Use Recursive binary splitting to grow a large tree.
+2. Apply cost complexity pruning to get a sequence of best subtrees, as a function of $\alpha$
+3. Use K-fold CV to choose $\alpha$.
+    1. Repeat steps 1 and 2 on all but the Kth fold of training data
+    2. Evaluate the mse on the left-out Kth fold, as a fucntion of $\alpha$. Average results of each value of $\alpha$, choose ove that minimizes average error.
+4. Return the subtree from step 2 that corresponds with the value of chosen $\alpha$
+
+# Step 1 - Grow the full tree
+
+```{r}
+#| echo: true
+
+rsample::initial_split(data = Hitters,prop = .75) -> hit_split
+rsample::training(hit_split) -> train_tree
+rsample::testing(hit_split) -> test_tree
+
+tree(Salary ~ ., data = train_tree) -> sal_hit_tree
+```
+
+# Step 2 - Apply Cost Complexity Pruning
+
+
+```{r}
+#| echo: true
+
+prune.tree(sal_hit_tree)
+```
+
+# Step 3  - Apply CV to choose $\alpha$
+
+```{r}
+#| echo: true
+
+cv.tree(sal_hit_tree,FUN = prune.tree) -> cv_pruned_estimates
+
+cv_pruned_estimates
+```
+
+# Step 3 - Apply CV to choose $\alpha$
+
+```{r}
+#| echo: true
+#| output-location: slide
+
+tibble(
+    leaves = cv_pruned_estimates$size,
+    rss = cv_pruned_estimates$dev
+) |>
+    ggplot(aes(leaves, rss)) +
+    geom_point()+
+    geom_line()+
+    theme_minimal()
+```
+
+
+# Step 4 - get the subtree from the large tree
+
+
+```{r}
+#| echo: true
+
+prune.tree(sal_hit_tree, best = 3) -> best_sub_tree_sal
+
+plot(best_sub_tree_sal)
+text(best_sub_tree_sal, pretty = 0)
+```
+
+# Lets predict using the model
+```{r}
+#| echo: true
+
+predict(best_sub_tree_sal, test_tree)
+```
