@@ -511,3 +511,138 @@ text(best_sub_tree_sal, pretty = 0)
 
 predict(best_sub_tree_sal, test_tree)
 ```
+
+# Do it yourself
+
+For the `Boston` data set from {ISLR2}, run a decision tree model that estimates the median value of owner-occupied homes in $1000. Complete the full algorith steps of growing a larger tree and choosing an alpha for the best possible subtree.
+
+# Classification Trees
+
+[Response is qualitative]{.fragment fragment-index='1'}
+<br><br>
+[For making predictions, instead of using the *mean* of the training observations in a region, the *most commonly occuring* class of training observations in a region is used.]{.fragment fragment-index='2'}
+<br><br>
+[Classification trees are grown in a similar fashion to regression trees]{.fragment fragment-index='3'}
+[But, instead of RSS we use the *classification error rate*]{.fragment fragment-index='4'}
+<br><br>
+[Classification Error Rate (E): The fraction of training observations in a region that do not belong to the most common class.]{.fragment fragment-index='5'}
+
+# Classification Error Rate
+
+<br>
+$$E = 1- max(\hat{p}_{mk}) $$
+
+Here $\hat{p}_{mk}$ is the proportion of training observations in the mth region of class k.
+<br><br>
+But, this is not *sufficiently sensitive* for tree growing, so we use other measures in practice.
+
+# Classification Error Rate - Issues
+
+:::: {.columns}
+::: {.column}
+
+```{mermaid}
+%%| fig-height: 10
+%%| fig-width: 6
+
+flowchart 
+    A[A50,B50] --> B[A10,B40]
+    A[A50,B50] --> C[A40,B10]
+
+```
+
+:::
+::: {.column}
+```{mermaid}
+%%| fig-height: 10
+%%| fig-width: 6
+
+flowchart 
+    A[A50,B50] --> B[A50,B20]
+    A[A50,B50] --> C[A0,B30]
+
+```
+
+:::
+::::
+<!-- end columns -->
+
+# Classification Error Rate - Issues
+
+[Does not favour "pure" nodes]{.fragment fragment-index='1'}
+<br><br>
+[Only cares about the *most common class*, ignores *by how much*]{.fragment fragment-index='2'}
+<br><br>
+[May result in premature stop in tree growing]{.fragment fragment-index='3'}
+<br><br>
+[Insensitive to minor changes in patterns]{.fragment fragment-index='4'}
+
+# Alternative - Gini
+
+<br><br>
+$G = \sum_{k=1}^{K}{\hat{p}_{mk}(1-\hat{p}_{mk})}$
+<br><br>
+The Value of G will be small when node purity is high.
+
+# Alternative - Entropy
+
+<br><br>
+$D = - \sum_{k=1}^{K}{\hat{p}_{mk}log\hat{p}_{mk}}$
+<br><br>
+The value of D will be near zero for $\hat{p}_{mk}$ near zero or one
+
+# Classification Error Rate - Issues
+```{r}
+#| echo: true
+#| output-location: slide
+
+tibble::tibble(
+  prop_a = seq(0,1,by = 0.001),
+  prop_b = 1- prop_a,
+  max = ifelse(prop_a>=prop_b, prop_a, prop_b),
+  E =  1 - max,
+  G = 2*(prop_a*prop_b),
+  En = -1*((prop_a*log(prop_a))+(prop_b*log(prop_b)))
+)  |> 
+  ggplot2::ggplot(ggplot2::aes(prop_a,E))+
+  ggplot2::geom_line() +
+  ggplot2::geom_line(ggplot2::aes(y = G), colour = "green") +
+  ggplot2::geom_line(ggplot2::aes(y = En), colour = "steelblue") +
+  ggplot2::theme_minimal() +
+  ggplot2::labs(
+    x = "probablity of Class A at a given node",
+    y = "Y",
+    title = "Comparing Classificaiton Error Rate, Gini and Entropy",
+    subtitle = "Toy example with two classes: A and B"
+  )
+```
+
+# A comment on E, G and D
+
+<br><br>
+[Best to use G or D for splitting]{.fragment fragment-index='1'}
+<br><br>
+[For pruning and gauging overall accuracy E is preferable if prediction accuracy is the goal.]{.fragment fragment-index='2'}
+<br><br>
+[The {tree} takes care of all this by default]{.fragment fragment-index='3'}
+
+# code refrence
+
+```{r}
+#| echo: true
+#| eval: false
+
+tree(league ~ . , data = Hitters) -> mod
+
+prune(mod, method = "misclass")
+
+cv.tree(mod, FUN = prune.misclass)
+
+
+```
+
+# Do it yourself
+
+[This link](https://www.statlearning.com/s/Heart.csv) has the `Heart data` for paitents with chest pains. The variable `AHD` is a binary variable where `Yes` refers to existing heart disease. Create a decision tree model, a full grown tree, to understand factors for predicting `AHD`. Also, prune this tree by choosing the appropriate $\alpha$. Write an interpretation note for your model.
+<br>
+Does your final and full grown trees have some spits that estimate the same response for terminal nodes? Why does that happen?
