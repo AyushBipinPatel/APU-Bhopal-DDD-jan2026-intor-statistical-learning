@@ -7,8 +7,8 @@ embed-resources: true
 Topics to be covered:
 
 1. Unit1: Same as Current Structure (Use Chapter2: 2.1 - 2.2 and 2.4)
-2. Unit2: Refresher on Linear Regression & Resampling methods (Use IMS 2e: CH7,8)
-3. Unit3: Tree based methods
+2. Unit2: Refresher on Linear Regression & Resampling methods (Use IMS 2e: CH7,8 | Use Chapters3, 5 ISLR)
+3. Unit3: Tree based methods (Use Chapter8 ISLR)
 4. Unit4: Same as Unit2 of the Current Structure
 5. Unit5: Sentiment analysis
 
@@ -40,6 +40,6 @@ May change with adequate notice.
 
 Links to resourses:
 
-1. [ISLR](https://www.statlearning.com/), also check out the youtube videos they have
+1. [ISLR](https://www.statlearning.com/), also check out the youtube videos they have. Use the june 2023 corrected version of the book
 2. [IMS](https://openintro-ims.netlify.app/)
 3. For a simulated and intuitive explanation of Bias-Variance Trade off see [Link](https://mlu-explain.github.io/bias-variance/)
