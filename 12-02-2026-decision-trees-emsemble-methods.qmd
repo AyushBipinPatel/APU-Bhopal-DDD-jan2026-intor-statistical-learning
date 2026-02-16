@@ -704,7 +704,7 @@ var(Z_i)
 
 # Bagging - before we get into it
 
-I estimate the variance of mean, it should be 100/100 ($\frac{\sigma^2}{n}$)
+I estimate the variance of mean, it should be ($\frac{\sigma^2}{n}$)
 
 
 ```{r}
@@ -712,14 +712,14 @@ I estimate the variance of mean, it should be 100/100 ($\frac{\sigma^2}{n}$)
 
 purrr::map_dbl(
   c(1:100),
-  ~ rnorm(n = 100, mean = 5, sd = 3) |>
+  ~ rnorm(n = 100, mean = 5, sd = 10) |>
     mean()
 ) |> var()
 ```
 
 # Bagging - before we get into it
 
-I estimate the distribution of variance of mean, it should be *centered* around 100/100 ($\frac{\sigma^2}{n}$)
+I estimate the distribution of variance of mean, it should be *centered* around ($\frac{\sigma^2}{n}$)
 
 
 ```{r}
@@ -730,7 +730,7 @@ purrr::map_dbl(
     c(1:1000),
     ~purrr::map_dbl(
   c(1:100),
-  ~ rnorm(n = 100, mean = 5, sd = 3) |>
+  ~ rnorm(n = 100, mean = 5, sd = 10) |>
     mean()
 ) |> var()
 ) |>
