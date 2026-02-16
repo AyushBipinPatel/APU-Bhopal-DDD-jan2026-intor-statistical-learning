@@ -645,4 +645,134 @@ cv.tree(mod, FUN = prune.misclass)
 
 [This link](https://www.statlearning.com/s/Heart.csv) has the `Heart data` for paitents with chest pains. The variable `AHD` is a binary variable where `Yes` refers to existing heart disease. Create a decision tree model, a full grown tree, to understand factors for predicting `AHD`. Also, prune this tree by choosing the appropriate $\alpha$. Write an interpretation note for your model.
 <br>
-Does your final and full grown trees have some spits that estimate the same response for terminal nodes? Why does that happen?
+Does your final and full grown trees have some splits that estimate the same response for terminal nodes? Why does that happen?
+
+# Decision Trees
+
+:::: {.columns}
+::: {.column}
+1. Easy to interpret
+2. Can handle qualitative as well as quantitative response
+:::
+::: {.column}
+1. Not as great for prediction accuracy as some other regression or classification approaches.
+2. Small changes in training data can lead to large chanages in the final estimated tree.
+:::
+::::
+<!-- end columns -->
+
+# Aggregating many trees can imporve performance (prediction)
+<br><br>
+
+Ensemble Mehtods: Bagging, random forests, boosting, and Bayesian additive regression trees.
+
+# Ensemble Methods
+<br>
+[Combine many simple models to get one powerful model]{.fragment fragment-index='1'}
+<br><br>
+[These simple models are sometimes known as *weak learners*]{.fragment fragment-index='2'}
+<br><br>
+
+# Bagging
+
+<br>
+[Remember *Bootstrap*?]{.fragment fragment-index='1'}
+<br><br>
+[Can be used to estimate the SD of the quantity of interest where it is hard or impossible to directly compute it.]{.fragment fragment-index='2'}
+<br><br>
+[Can be also used to imporve statistical learning models like decision trees]{.fragment fragment-index='3'}
+<br><br>
+
+# Bagging - before we get into it
+
+> "*Averaging a set of observations reduces variance*"
+
+# Bagging - before we get into it
+
+> Imagine a natural process that generates $n$ observation $Z_1, Z_2, ...,Z_n$ with Variance $\sigma^2$. Stats says that the variance of $\bar{Z}$ is $\frac{\sigma^2}{n}$
+
+
+```{r}
+#| echo: true
+
+rnorm(n = 100,mean = 5,sd = 10) -> Z_i
+
+Z_i
+
+var(Z_i)
+```
+
+# Bagging - before we get into it
+
+I estimate the variance of mean, it should be 100/100 ($\frac{\sigma^2}{n}$)
+
+
+```{r}
+#| echo: true
+
+purrr::map_dbl(
+  c(1:100),
+  ~ rnorm(n = 100, mean = 5, sd = 3) |>
+    mean()
+) |> var()
+```
+
+# Bagging - before we get into it
+
+I estimate the distribution of variance of mean, it should be *centered* around 100/100 ($\frac{\sigma^2}{n}$)
+
+
+```{r}
+#| echo: true
+#| output-location: slide
+
+purrr::map_dbl(
+    c(1:1000),
+    ~purrr::map_dbl(
+  c(1:100),
+  ~ rnorm(n = 100, mean = 5, sd = 3) |>
+    mean()
+) |> var()
+) |>
+    density()|>
+    plot("Distribution of the variance of mean")
+```
+
+# Bagging - before we get into it
+
+<br><br>
+> So, averaging stuff reduces the variance, we can be sure. Natuarally, we can reduce the variance of a statistical learning methods by averaging.
+
+# Bagging
+
+<br>
+[So, take multiple training sets]{.fragment fragment-index='1'}
+<br><br>
+[Grow a full tree for each training sets]{.fragment fragment-index='2'}
+<br><br>
+[Average the resulting predictions]{.fragment fragment-index='3'}
+<br><br>
+[$\hat{f}_{avg} = \frac{1}{B}\sum_{b=1}^{B}{\hat{f}^b}$]{.fragment fragment-index='4'}
+<br><br>
+[But I dont ahve so much training data]{.fragment fragment-index='5'}
+
+# Bagging
+
+So, Bootstrap. Bootstrap + Aggregating = Bagging
+
+<br><br>
+
+$\hat{f}_{bag} = \frac{1}{B}\sum_{b=1}^{B}{\hat{f}^{*b}}$
+
+# Bagging
+
+<br>
+[These trees are grown deep]{.fragment fragment-index='1'}
+<br><br>
+[Not Pruned]{.fragment fragment-index='2'}
+<br><br>
+[So each individual tree has high variance and low bias.]{.fragment fragment-index='3'}
+<br><br>
+[Averaging the trees reduces the variance]{.fragment fragment-index='4'}
+<br><br>
+[In classification setting we use majority vote instead of average]{.fragment fragment-index='5'}
