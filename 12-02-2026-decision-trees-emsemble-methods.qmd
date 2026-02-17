@@ -32,6 +32,8 @@ library(randomForest)
 library(gbm)
 library(BART)
 library(palmerpenguins)
+library(glue)
+library(ggtext)
 ```
 
 # Hello
@@ -634,7 +636,7 @@ tibble::tibble(
 
 tree(league ~ . , data = Hitters) -> mod
 
-prune(mod, method = "misclass")
+prune.tree(mod, method = "misclass")
 
 cv.tree(mod, FUN = prune.misclass)
 
@@ -776,3 +778,380 @@ $\hat{f}_{bag} = \frac{1}{B}\sum_{b=1}^{B}{\hat{f}^{*b}}$
 [Averaging the trees reduces the variance]{.fragment fragment-index='4'}
 <br><br>
 [In classification setting we use majority vote instead of average]{.fragment fragment-index='5'}
+
+# Bagging - How well it performs?
+
+<br><br>
+ 
+> I want to compare the Bagging test error rate with the unpruned single tree test error rate and pruned single tree test error rate.
+
+# Bagging - How well it performs?
+
+<br>
+I will use the orange juice data set to work this example
+<br>
+
+```{r}
+#| echo: false
+
+OJ |>
+    glimpse()
+```
+
+# Bagging - How well it performs?
+
+**Steps**
+
+1. Split data in training and test.
+2. On the training data grow a decision tree for classification. (Mod1)
+3. Find the error rate of Mod1 on test data.
+4. Prune the Mod1 by finding $\alpha$ through CV. Call this model Mod2.
+5. Find error rate of Mod2 on test data.
+6. Split the training data in 300 bootstrap samples. Grow a tree for each of the 300 samples. 
+7. Using all 300 trees predict error rate for test data. (Bagging test error rate) 
+8. Do point 7 sequentially to show how Bagging test error rate changes with number of bootstrap samples.(E by using Bootstrap sample 1 only, then with 1 and 2, then 1 to 3, till 1 to 300)
+
+# Bagging - How well it performs?
+
+**Step1**: Split data in training and test.
+<br>
+
+```{r}
+#| echo: true
+
+rsample::initial_split(data = OJ, prop = .9) -> oj_split
+rsample::training(oj_split) -> oj_train
+rsample::testing(oj_split) -> oj_test
+
+```
+
+# Bagging - How well it performs?
+
+**Step2**: On the training data grow a decision tree for classification. (Mod1)
+<br>
+
+```{r}
+#| echo: true
+
+tree(Purchase ~., oj_train) -> Mod1
+
+```
+
+# Bagging - How well it performs?
+
+**Step3**: Find the error rate of Mod1 on test data.
+<br>
+
+```{r}
+#| echo: true
+
+Mod1_test_error <- sum(
+    predict(Mod1, oj_test, "class") != oj_test$Purchase
+    )/107
+```
+
+# Bagging - How well it performs?
+
+**Step4**: Prune the Mod1 by finding $\alpha$ through CV. Call this model Mod2.
+<br>
+
+```{r}
+#| echo: true
+
+map(
+    c(1:100),
+    ~tibble(
+        size = cv.tree(Mod1,FUN = prune.misclass)[["size"]],
+        e = cv.tree(Mod1,FUN = prune.misclass)[["dev"]]
+    )
+) |>
+    list_rbind()|>
+    group_by(size) |>
+    summarise(
+        mean_e = mean(e, na.rm = T)
+    )
+
+prune.tree(Mod1,best = 4) -> Mod2
+```
+
+# Bagging - How well it performs?
+
+**Step5**: Find error rate of Mod2 on test data
+<br>
+
+```{r}
+#| echo: true
+
+Mod2_test_error <- sum(
+    predict(Mod2, oj_test, "class") != oj_test$Purchase
+    )/107
+```
+
+# Bagging - How well it performs?
+
+**Step6&7**: Split the training data in 300 bootstrap samples. Grow a tree for each of the 300 samples. Using all 300 trees predict error rate for test data. (Bagging test error rate) 
+<br>
+
+```{r}
+#| echo: true
+#| code-fold: true
+rsample::bootstraps(oj_train,times = 300) -> oj_train_boot
+
+get_dist_error_test_set <- function(i){
+
+    tree(Purchase ~ ., data = rsample::get_rsplit(oj_train_boot,index = i) |> 
+    as.data.frame()
+        ) -> tree_oj
+
+    tibble(
+        "b_{i}" := predict(tree_oj, oj_test, "class")
+    )
+
+}
+
+map(
+    c(1:300),
+    get_dist_error_test_set
+) |>
+    list_cbind() -> boot_predicts
+
+boot_predicts |> 
+    as.matrix() |> 
+    t() |> 
+    as.data.frame() -> boot_predicts
+
+boot_predicts
+
+```
+
+# Bagging - How well it performs?
+
+**Step8**: Do point 7 sequentially to show how Bagging test error rate changes with number of bootstrap samples.(E by using Bootstrap sample 1 only, then with 1 and 2, then 1 to 3, till 1 to 300)
+<br>
+
+
+```{r}
+#| echo: true
+#| output-location: slide
+    
+across_boots_acc <- function(i) {
+    
+    boot_predicts[c(1:i),] |>   
+    summarise(across(everything(),~ attr(sort(table(.x),decreasing = T)[1],"name"))) |> 
+    t() |> 
+    as.vector() -> boot_predicts
+    
+    sum(boot_predicts == oj_test$Purchase, na.rm = T)/107
+
+}
+
+tibble(
+    num_boots = c(1:300),
+    bagg_test_error = 1-(map_dbl(
+    c(1:300),
+    across_boots_acc))
+) |>
+    ggplot(aes(x = num_boots, y = bagg_test_error)) +
+    geom_line(colour = "steelblue")+
+    geom_hline(aes(yintercept = Mod1_test_error), 
+    linetype = 2, colour = "red")+
+    annotate(geom = "text", 
+    label = "Unpruned single tree Test error rate",
+    x = 275, y = Mod1_test_error, colour = "red")+
+    geom_hline(aes(yintercept = Mod2_test_error), 
+    linetype = 2, colour = "red")+
+    annotate(geom = "text", 
+    label = "pruned single tree Test error rate",
+    x = 275, y = Mod2_test_error, colour = "red")+
+    labs(
+        title = "Comparing test error rate estimates",
+        x = "Number of bootstrap samples",
+        y = "Error",
+        subtitle = "Plot shows: <span style='color:steelblue;'>Bagging test error rate.</span>"
+    )+
+    theme_minimal() +
+    theme(
+        plot.title.position = "plot",
+        plot.subtitle = element_markdown()
+    )
+
+```
+
+# Bagging 
+
+> Why are we wasting samples to get an estimate of test error rate? There is a way *Out-of-Bag Error Estimation*.
+
+# Bagging - Out-of-Bag Error Estimation
+
+1. On an average each bagged tree uses only 2/3 rd of the observations.
+2. This would mean that there are 1/3 rd observations which are not used to fit a given bagged tree. These are called "Out-of-Bag" or OOB.
+3. A given *i*th OOB observation can be predicted using B/3 trees. (By average or mode)
+4. This can be achieved for all OOB observations.
+5. These predictions for OOB can be compared against true values to obtain OOB MSE.
+6. OOB MSE is a valid estimate of test error for the bagged model.
+
+# Bagging error rate estimates
+
+```{r}
+#| echo: true
+#| output-location: slide
+
+randomForest::randomForest(Purchase ~. , OJ,mtry = 17) -> bag_oj
+
+tibble(
+    num_boots = c(1:300),
+    bagg_test_error = 1-(map_dbl(
+    c(1:300),
+    across_boots_acc)),
+    oob_mse = bag_oj$err.rate[c(1:300),"OOB"]
+) |>
+    ggplot(aes(x = num_boots, y = bagg_test_error)) +
+    geom_line(colour = "steelblue")+
+    geom_line(aes(y = oob_mse),
+    colour = "green") +
+    geom_hline(aes(yintercept = Mod1_test_error), 
+    linetype = 2, colour = "red")+
+    annotate(geom = "text", 
+    label = "Unpruned single tree Test error rate",
+    x = 275, y = Mod1_test_error, colour = "red")+
+    geom_hline(aes(yintercept = Mod2_test_error), 
+    linetype = 2, colour = "red")+
+    annotate(geom = "text", 
+    label = "pruned single tree Test error rate",
+    x = 275, y = Mod2_test_error, colour = "red")+
+    labs(
+        title = "Comparing test error rate estimates",
+        x = "Number of bootstrap samples",
+        y = "Error",
+        subtitle = "Plot shows: <span style='color:steelblue;'>Bagging test error rate.</span>, <span style='color:green;'>OOB MSE - Bootstrap</span>"
+    )+
+    theme_minimal() +
+    theme(
+        plot.title.position = "plot",
+        plot.subtitle = element_markdown()
+    )
+
+```
+
+# Bootstrap and interpretation
+
+> While prediction improves, there is some loss of interpretability. To address is as best as one can, we use Variance Improtance Measures.
+
+# Bootstrap - VIM
+
+```{r}
+#| echo: false
+
+bag_oj$importance |>
+    kableExtra::kable() |>
+    kableExtra::kable_styling() |>
+    kableExtra::scroll_box(width = '100%', height = '500px')
+```
+
+# Bootstrap - VIM
+
+```{r}
+#| echo: false
+
+bag_oj$importance |>
+    as.data.frame() |> 
+    rownames_to_column("var") |>
+    mutate(
+        var = fct_reorder(var,MeanDecreaseGini)
+    ) |>
+    ggplot(aes(y = var,x =MeanDecreaseGini)) +
+    geom_col(fill = "steelblue")+
+    labs(
+        x = "Mean Decrease in Gini",
+        y = NULL,
+        title = "Vaiable Importance Measure"
+    ) +
+    theme_minimal() +
+    theme(
+        plot.title.position = "plot",
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank()
+    )
+```
+
+# Random Forest
+
+[In bagging, though the training observations changes, most trees will look more or less alike. Especially of one of the predictors can very strongly predict the response, with other predictors that moderately precidt the response.]{.fragment fragment-index='1'}
+<br><br>
+[This makes us question independence of the bootstrap predictions]{.fragment fragment-index='2'}
+<br><br>
+[And, if independence is not observed, averaging does not reduce the variance.]{.fragment fragment-index='3'}
+[Consequently, the bagging may not result in substantial reduction in the variance of the method.]{.fragment fragment-index='4'}
+<br><br>
+[So we decorelate the trees by forcing to use only $m$ of the $p$ predictor at every given split of every tree. usually $m = \sqrt{p}$]{.fragment fragment-index='5'}
+
+# Random Forest OOB MSE
+
+```{r}
+#| echo: false
+
+randomForest(Purchase ~.,data = OJ, mtry = 4) ->rf_oj
+
+tibble(
+    num_boots = c(1:300),
+    bagg_test_error = 1-(map_dbl(
+    c(1:300),
+    across_boots_acc)),
+    oob_mse = bag_oj$err.rate[c(1:300),"OOB"],
+    oob_mse_rf = rf_oj$err.rate[c(1:300),"OOB"]
+) |>
+    ggplot(aes(x = num_boots, y = bagg_test_error)) +
+    geom_line(colour = "steelblue")+
+    geom_line(aes(y = oob_mse),
+    colour = "green") +
+    geom_line(aes(y = oob_mse_rf),
+    colour = "purple") +
+    geom_hline(aes(yintercept = Mod1_test_error), 
+    linetype = 2, colour = "red")+
+    annotate(geom = "text", 
+    label = "Unpruned single tree Test error rate",
+    x = 275, y = Mod1_test_error, colour = "red")+
+    geom_hline(aes(yintercept = Mod2_test_error), 
+    linetype = 2, colour = "red")+
+    annotate(geom = "text", 
+    label = "pruned single tree Test error rate",
+    x = 275, y = Mod2_test_error, colour = "red")+
+    labs(
+        title = "Comparing test error rate estimates",
+        x = "Number of bootstrap samples",
+        y = "Error",
+        subtitle = "Plot shows: <span style='color:steelblue;'>Bagging test error rate.</span>, <span style='color:green;'>OOB MSE - Bootstrap</span>, <span style='color:purple;'>OOB MSE - Random Forest</span>"
+    )+
+    theme_minimal() +
+    theme(
+        plot.title.position = "plot",
+        plot.subtitle = element_markdown()
+    )
+```
+
+# Application: Bootstraping
+
+```{r}
+#| echo: true
+
+randomForest(Purchase ~ ., data = OJ, mtry = 17)
+```
+
+# Application: Random Forest
+
+```{r}
+#| echo: true
+
+randomForest(Purchase ~ .,  data = OJ, mtry = 4)
+```
+
+# Do it yourself
+
+1. Goal: Use `cells` from {modeldata} to predict the `class` variable.
+2. Drop the `case` variable before doing any modeling.
+3. Find the test set error rate of single unpruned tree.
+4. Find the test set error rate for a single pruned tree with cost complexity pruning.
+5. Find OOB MSE of the bagging model.
+6. Find OOB MSE of the random forest model. 
+7. explore model objects in points 5 and 6.
+8. Make chart comparing test error rate estimation from points 3,4,5,and 6.
