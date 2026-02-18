@@ -1155,3 +1155,143 @@ randomForest(Purchase ~ .,  data = OJ, mtry = 4)
 6. Find OOB MSE of the random forest model. 
 7. explore model objects in points 5 and 6.
 8. Make chart comparing test error rate estimation from points 3,4,5,and 6.
+
+# Boosting 
+
+[Does not involve bootstraping]{.fragment fragment-index='1'}
+<br><br>
+[Instead, trees are grown sequentially. Each tree is grown from information from the previous tree.]{.fragment fragment-index='2'}
+<br><br>
+[So, boosting trees are not independent of each other]{.fragment fragment-index='3'}
+<br><br>
+[Learning slowly avoids overfitting]{.fragment fragment-index='4'}
+<br><br>
+
+# Boosting Algorithm
+
+![from ISLR](images/boosting%20algorithm.png)
+
+# Boosting  - params
+
+[**B Number of trees**: *Not bootstrap samples*. Number of trees grown sequentially. Error rate does not stabilise with Large B like bagging and boosting. A large B for boosting can overfit. So, CV is used to select B for boosting.]{.fragment fragment-index='1'}
+<br><br>
+
+[**Shrinkage Parameter $\lambda$**: Small positive number. Controls the rate at which boosting learns. Very small $\lambda$ can need a very large number of B to get good performance. Usual values are 0.01 or 0.001 ]{.fragment fragment-index='2'}
+<br><br>
+
+[**Depth $d$**: Controls the complexity of the boosted ensemble. Ususal d values are 1,4,6,8 depending on data. Also controls the possibility for interaction. Also referred to *interaction depth*]{.fragment fragment-index='3'}
+
+# Applying Boosting
+
+```{r}
+#| echo: true
+
+library(gbm)
+initial_split(Boston,prop = .7) -> Boston_split
+training(Boston_split) -> Boston_train
+testing(Boston_split) -> Boston_test
+
+boost.bostom <- gbm(medv ~ ., 
+data = Boston_train, 
+distribution = "gaussian",
+n.trees = 5000,
+interaction.depth = 4
+)
+
+boost.bostom
+```
+
+# Applying Boosting
+```{r}
+#| echo: false
+
+summary(boost.bostom)
+```
+
+# Applying Boosting
+
+Partial dependence plots
+
+```{r}
+#| echo: true
+#| layout-ncol: 2
+plot(boost.bostom, i = "rm")
+plot(boost.bostom, i = "lstat")
+```
+
+# Applying Boosting
+
+```{r}
+#| echo: true
+
+predict(boost.bostom, Boston_test) -> y_hat
+
+mean((y_hat - Boston_test$medv)^2, na.rm = T)
+
+```
+
+# Applying Boosting
+
+```{r}
+#| echo: true
+
+boost.bostom <- gbm(medv ~ ., 
+data = Boston_train, 
+distribution = "gaussian",
+n.trees = 5000,
+interaction.depth = 4,
+shrinkage = 0.2, # control for lambda
+verbose = F
+)
+
+predict(boost.bostom, Boston_test) -> y_hat
+
+mean((y_hat - Boston_test$medv)^2, na.rm = T)
+
+```
+
+# Applying Boosting
+
+```{r}
+#| echo: true
+boost.bostom <- gbm(medv ~ ., 
+data = Boston_train, 
+distribution = "gaussian",
+n.trees = 5000,
+interaction.depth = 4,
+cv.folds = 100
+)
+
+gbm.perf(boost.bostom, method = "cv")
+
+```
+
+# Boosting vs RF
+
+
+```{r}
+#| echo: true
+#| output-location: slide
+
+randomForest(medv ~. , Boston, mtry = 3, ntree = 5000) -> rf_bosotn
+
+tibble(
+    i = c(1:5000),
+    boost_mse = boost.bostom$cv.error,
+    rf_mse = rf_bosotn$mse
+) |>
+    ggplot(aes(i,boost_mse))+
+    geom_line()+
+    geom_line(aes(y = rf_mse), colour = "red") +
+    labs(
+        x = "Number of trees",
+        y = "MSE"
+    )+
+    ylim(8,15)+
+    theme_minimal()
+
+```
+
+# Do it yourself
+
+Use the `ischemic_stroke` data from modeldata library. Predict `stroke`. Compare Boosting with randomforest. What are the optimal number of boosting trees? Which model performs better? Which are the important variables.
