@@ -1295,3 +1295,107 @@ tibble(
 # Do it yourself
 
 Use the `ischemic_stroke` data from modeldata library. Predict `stroke`. Compare Boosting with randomforest. What are the optimal number of boosting trees? Which model performs better? Which are the important variables.
+
+# Bayesian Additive Regression Trees (BART)
+
+> BART is related to both approaches. Growing trees randomly as well as growing tres where each tree tries to capture the signal not yet accounted by the current model.
+
+# Bayesian Additive Regression Trees (BART)
+
+[We grow a total of $K$ trees over $B$  iterations]{.fragment fragment-index='1'}
+<br><br>
+[Such that, $\hat{f}_k^b(x)$ represents the prediction at $x$ by the kth tree of the bth iteration]{.fragment fragment-index='1'}
+<br><br>
+[All trees of a given iteration are summmed to get:]{.fragment fragment-index='3'}
+<br><br>
+[$\hat{f}^b = \sum_{k=1}^{K}{\hat{f}_k^b(x)}$]{.fragment fragment-index='4'}
+
+# Bayesian Additive Regression Trees (BART)
+
+[For the first iteration, we set the trees in a manner such that sum of the trees in the first iteration comes out to the mean of the response.]{.fragment fragment-index='1'}
+<br><br>
+[$\hat{f}^1 = \sum_{k=1}^{K}{\hat{f}_{k}^1}=\frac{1}{n}\sum_{i=1}^{n}{y_i}$]{.fragment fragment-index='2'}
+<br><br>
+[All trees of the first iteration are initialised to have a single root node, described by:]{.fragment fragment-index='3'}
+<br><br>
+[$\hat{f}_{k}^{1} = \frac{1}{nK}\sum_{i=1}^{n}{y_i}$]{.fragment fragment-index='4'}
+
+# Bayesian Additive Regression Trees (BART)
+
+[For subsequent iterations, Each K trees are updated one at a time.]{.fragment fragment-index='1'}
+<br><br>
+[Instead of fitting a fresh tree, BART randomly chooses a perturbation (disturbance) to the tree from the previous iteration $\hat{f}_{k}^{b-1}$]{.fragment fragment-index='2'}
+<br><br>
+[This perturbation could be either (A) increasing or pruning the branches or (B) change the prediction of each terminal node of the tree]{.fragment fragment-index='3'}
+<br><br>
+[The trees are fit on partial residuals, described as ]{.fragment fragment-index='4'}
+<br><br>
+[$r_i = y_i - \sum_{k^{\prime} < k}{\hat{f}_{k^{\prime}}^{b}(x_i)} - \sum_{k^{\prime} > k}{\hat{f}_{k^{\prime}}^{b-1}(x_i)}$]{.fragment fragment-index='5'}
+
+# Bayesian Additive Regression Trees (BART)
+
+The output of BART is a collection of prediction models
+<br><br>
+
+$\hat{f}^{b} = \sum_{k=1}^{K}{\hat{f}_{k}^{b}(x)}$ for $b = 1,2,3,4....., B$
+
+# Bayesian Additive Regression Trees (BART)
+
+[The first few of these prediction models are thrown out, denoted by $L$, the burn-in period]{.fragment fragment-index='1'}
+<br><br>
+[To obtain single prediciton]{.fragment fragment-index='2'}
+<br><br>
+[$\hat{f}(x)=\frac{1}{B-L}\sum_{b = L+1}^{B}{\hat{f}^{b}(x)}$]{.fragment fragment-index='3'}
+<br><br>
+[Instead of averages, percentils can also be used to measure uncertainity.]
+
+# Bayesian Additive Regression Trees (BART)
+
+![from ISLR](images/bart%20algo.png)
+
+# Bayesian Additive Regression Trees (BART)
+
+[Parameters to select]{.fragment fragment-index='1'}
+<br><br>
+[$K$, The number of trees]{.fragment fragment-index='2'}
+<br><br>
+[$B$, the number of iterations]{.fragment fragment-index='3'}
+<br><br>
+[$L$, the burn-in iterations]{.fragment fragment-index='4'}
+
+# Applying BART
+
+```{r}
+#| echo: true
+
+library(BART)
+
+gbart(
+    x.train = Boston_train[,1:12],
+    y.train = Boston_train[,"medv"],
+    x.test = Boston_test[,1:12]
+) ->  bart_boston
+
+# bart_boston$yhat.test 
+
+mean((Boston_test$medv - bart_boston$yhat.test.mean)^2)
+
+```
+
+# Applying BART
+
+A sort of variable importance, occurence of each predictor in collection of trees
+
+```{r}
+#bart_boston$varcount
+
+bart_boston$varcount.mean |> 
+    sort()
+```
+
+# Applying BART
+
+`ntree`  to control for $K$<br>
+`nskip` to control for $L$<br>
+`ndpost` to control for $B-L$<br>
+
