@@ -1,0 +1,139 @@
+---
+title: "An Introduction to Text Analysis"
+author: "Ayush Patel"
+subtitle: "DDD: Elements of Statistical Machine Learning & Politics of Data"
+institute: "At Azim Premji University"
+date: today
+date-format: "DD MMM, YYYY"
+format: 
+  revealjs:
+    fig-height: 6
+    fig-width: 14
+    embed-resources: true
+    margin-left: 50px
+    margin-right: 50px
+    slide-number: c/t
+    width: 1400
+    height: 850
+    theme: [default, theme.scss]
+    footer: "Email: ayush.ap58@gmail.com"
+---
+
+```{r}
+#| include: false
+#| warning: false
+
+library(tidyverse)
+library(tidytext)
+```
+
+# Hello
+
+::::{.columns}
+
+:::{.column}
+
+[I am Ayush.]{.fragment fragment-index="1" style="font-size:45px"}
+
+[I am a researcher working at the intersection of data, development and economics.]{.fragment fragment-index="2" style="font-size:25px"}
+
+[I am a [RStudio (Posit) certified tidyverse Instructor.](https://education.rstudio.com/trainers/people/patel+ayush/)]{.fragment fragment-index="3" style="font-size:25px"}
+
+[I am a Researcher at [Oxford Poverty and Human development Initiative (OPHI)](https://ophi.org.uk/), at the University of Oxford.]{.fragment fragment-index="4" style="font-size:25px"}
+
+:::
+
+:::{.column}
+
+![[Hello (Eh bonjour– donc–.) by Charles Motte](https://www.metmuseum.org/art/collection/search/392118"Well)](https://images.metmuseum.org/CRDImages/dp/original/DP808141.jpg){fig-align="center" height=400 .lightbox}
+ 
+
+:::
+
+::::
+
+# Did you come prepared?
+
+::::{.columns}
+
+:::{.column}
+- You have installed R. If not see [this link]().
+
+- You have installed RStudio/Positron/VScode or any other IDE. It is recommended that you work through an IDE
+
+- You have the libraries `{tidytext} ` installed
+
+:::
+
+:::{.column}
+
+![[Armor (Gusoku) Helmet signed by Bamen Tomotsugu](https://www.metmuseum.org/art/collection/search/24975)](https://images.metmuseum.org/CRDImages/aa/original/DT5333.jpg){fig-align="center" height=400 .lightbox}
+
+
+:::
+
+::::
+
+
+# Before NLP and Text Analysis
+
+[One needs to know how to mine, warngle, and manipulate text data.]{.fragment fragment-index='1'}
+<br><br>
+[tidy priciples can make this task easy (relatively)]{.fragment fragment-index='2'}
+<br><br>
+[*"Treating text as data frames of individual words allows us to manipulate, summarize, and visualize the characteristics of text easily and integrate natural language processing into effective workflows..."*]{.fragment fragment-index='3'}
+<br><br>
+[We do this using the {tidytext} alonmg with other know methods]{.fragment fragment-index='4'}
+
+# Tidy Data
+
+As described in [Wickham 2014](https://www.jstatsoft.org/article/view/v059i10)
+
+1. Each variable is a column.
+2. Each observation is a row.
+3. Each type of observational unit is a table.
+
+# Tidy Text
+
+As described by [Silge and Robinson 2017](https://www.tidytextmining.com/)
+
+1. **A table with one-token-per-row**
+2. token: A meaningful unit of text. (word,sentence,etc)
+3. There are other forms of text data structures: string, corpus, document-term matric. (more on this later)
+
+# Tokens
+
+>"*A token is a meaningful unit of text, most often a word, that we are interested in using for further analysis, and tokenization is the process of splitting text into tokens.*"
+
+# Unnesting Tokens
+
+We need to get the text in *one-token-per-row* to acheive the Tidy Text format. This can be dome by the `unnest_tokens()` function from {tidytext}
+<br>
+
+```{r}
+#| echo: true
+
+text <- c("Because I could not stop for Death -",
+          "He kindly stopped for me -",
+          "The Carriage held but just Ourselves -",
+          "and Immortality")
+
+text
+
+```
+
+# Unnesting Tokens
+
+Notice any punctuations?
+<br>
+```{r}
+tibble(
+  row = c(1:length(text)),
+  text = text
+) |>
+  unnest_tokens(token = "words",output = word, input =  text)
+```
+
+# The RBI MPC minutes
+
+
