@@ -236,3 +236,130 @@ mpc_minutes_unnested |>
 
 
 ```
+
+# Can do other stuff
+
+**Is the MPC always attended by all the members**
+<br>
+
+```{r}
+#| echo: true
+#| output-location: slide
+
+mpc_minutes |>
+  group_by(identifier) |>
+  summarise(
+    attend_all = ifelse(sum(str_detect(lines,"was attended by all the members")) ==1,"Yes","No")
+  ) |>
+    ggplot(aes(x=""))+
+    geom_bar(aes(fill = attend_all),
+    position = "fill",
+    width = 0.25)+
+    scale_fill_manual(values = c("#b35a54ff","#6c8562ff"))+
+    theme_minimal() +
+    theme(
+      legend.position = "none",
+      plot.title.position = "plot",
+      panel.grid.major.y = element_blank(),
+      aspect.ratio = 0.25
+    )+
+    scale_y_continuous(expand = expansion(mult = c(0, 0)),limits = c(0,1))+
+    scale_x_discrete(expand =  expansion(mult = c(0, 0)))+
+    labs(
+      x = NULL,
+      y = NULL,
+      title = "Proportion of MPC meetings that do not have all members present.",
+      subtitle = "Green rpresents meetings with all members present. Red represents one or more absent members. n=58"
+    ) +
+    coord_flip()
+
+```
+
+# Can do other stuff
+
+**Is the decision making in the MPC usually unanimous?** [doc](https://website.rbi.org.in/documents/d/rbi/pr570202526_rbi) [doc1](https://website.rbi.org.in/documents/87730/39710918/PR1769MPCf562eb05339b404f8dc23d07725ef354.pdf)
+<br>
+
+```{r}
+#| echo: true
+#| output-location: slide
+
+mpc_minutes |>
+  filter(str_detect(lines, "[:alpha:]{1,}\\s{1,}Yes$") | str_detect(lines, "[:alpha:]{1,}\\s{1,}No$") | 
+  str_detect(lines, "[:alpha:]{1,}\\s{1,}Yes\\s{1,}[:digit:]{2}$") | str_detect(lines, "[:alpha:]{1,}\\s{1,}No\\s{1,}[:digit:]{2}$")) |>
+  mutate(
+    identifier = str_remove(identifier,"Minutes of the Monetary Policy Committee Meeting"),
+    identifier = paste0(str_extract(identifier,"[:alpha:]{1,} "),str_extract(identifier," [:digit:]{4}")),
+    individual = str_squish(str_extract(lines,"^.{1,}(?=Yes|No)")),
+    identifier = lubridate::my(identifier),
+    decision = str_squish(str_extract(lines," Yes| No| Yes | No "))
+  ) |> 
+  select(-lines) |>
+  ggplot(aes(identifier)) +
+  geom_bar(aes(fill = decision)) +
+  scale_fill_manual(values = c("#b35a54ff","#6c8562ff"))+
+    labs(
+      title = "MPC decisions across time.",
+      x = NULL,
+      y = "Number of Members",
+      subtitle = "Green represents members in favour of resolution. Red represents members not in favour. n=58. 19/58 are not unanimous."
+    ) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0)),limits = c(0,6))+
+    scale_x_date(expand =  expansion(mult = c(0, 0)),
+    breaks = scales::breaks_width("2 months"),
+    labels = scales::label_date("%m-%y")
+     )+
+    theme_minimal() +
+    theme(
+      panel.grid.minor.x = element_blank(),
+      axis.text.x = element_text(angle = 90),
+      plot.title.position = "plot",
+      legend.position = "none"
+    ) 
+
+
+```
+
+# Can AI do this
+
+**Yes, be careful with what you want.**
+<br><br>
+See [this](https://www.perplexity.ai/search/i-have-a-csv-file-containing-m-VzVGrVZ2T1uWsRO0bPoxNw)
+
+# Can do other stuff
+
+**who say no?**
+<br>
+
+```{r}
+#| echo: true
+#| output-location: slide
+mpc_minutes |>
+  filter(str_detect(lines, "[:alpha:]{1,}\\s{1,}Yes$") | str_detect(lines, "[:alpha:]{1,}\\s{1,}No$") | 
+  str_detect(lines, "[:alpha:]{1,}\\s{1,}Yes\\s{1,}[:digit:]{2}$") | str_detect(lines, "[:alpha:]{1,}\\s{1,}No\\s{1,}[:digit:]{2}$")) |>
+  mutate(
+    identifier = str_remove(identifier,"Minutes of the Monetary Policy Committee Meeting"),
+    identifier = paste0(str_extract(identifier,"[:alpha:]{1,} "),str_extract(identifier," [:digit:]{4}")),
+    individual = str_squish(str_extract(lines,"^.{1,}(?=Yes|No)")),
+    identifier = lubridate::my(identifier),
+    decision = str_squish(str_extract(lines," Yes| No| Yes | No "))
+  ) |> 
+  select(-lines) |>
+  mutate(
+    individual = ifelse(str_detect(individual,"Dr.[:alpha:]"),
+    str_replace(individual,pattern = "Dr.","Dr. "),
+    individual)
+    ) |>
+  group_by(individual) |>
+  summarise(
+    n = n(),
+    in_favour = sum(decision == "Yes"),
+    not_in_favour = n - in_favour
+  ) |>
+    arrange(desc(n)) |>
+    kableExtra::kable() |>
+    kableExtra::kable_styling() |>
+    kableExtra::scroll_box(width = '100%', height = '500px')
+```
+
+# All this is fine. Where is the cool stuff?
