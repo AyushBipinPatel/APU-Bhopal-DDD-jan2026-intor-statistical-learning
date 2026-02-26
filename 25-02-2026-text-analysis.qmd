@@ -27,6 +27,12 @@ library(tidyverse)
 library(tidytext)
 ```
 
+```{r}
+#| echo: false
+
+read_csv("rbi-mpc-for-text-analyses/cleaned-mpc-minutes-text.csv") -> mpc_minutes
+```
+
 # Hello
 
 ::::{.columns}
@@ -126,6 +132,7 @@ text
 
 Notice any punctuations?
 <br>
+
 ```{r}
 tibble(
   row = c(1:length(text)),
@@ -134,6 +141,98 @@ tibble(
   unnest_tokens(token = "words",output = word, input =  text)
 ```
 
+# Unnesting Tokens
+
+[Tokens can be sentences, characters, lines, paragraphs, or a regex pattern]{.fragment fragment-index='1'}
+<br><br>
+[Not all words are useful. We can remove *stop words*]{.fragment fragment-index='2'}
+
+
 # The RBI MPC minutes
 
+See a sample [here](https://website.rbi.org.in/documents/87730/39710918/PR1769MPCf562eb05339b404f8dc23d07725ef354.pdf)
+<br>
 
+```{r}
+#| echo: false
+
+mpc_minutes |>
+  head(100) |>
+  kableExtra::kable() |>
+  kableExtra::kable_styling() |>
+  kableExtra::scroll_box(width = '100%', height = '500px')
+
+```
+
+
+# The RBI MPC minutes
+
+**Unnest tokens to get tidytext format**
+<br>
+
+```{r}
+#| echo: true
+
+mpc_minutes |>
+  mutate(
+    identifier = str_remove(identifier,".{1,}g,")
+  ) |>
+  unnest_tokens(output = word,input = lines)  -> mpc_minutes_unnested
+
+mpc_minutes_unnested
+```
+
+# The RBI MPC minutes - removing stop words
+
+**You can choose which stop words to remove**
+<br>
+
+```{r}
+#| echo: true
+
+mpc_minutes_unnested |>
+  anti_join(stop_words |>
+  filter(!word %in% c("yes","no"))) -> mpc_minutes_unnested
+
+```
+
+# The RBI MPC Minutes - Word freq
+
+**Notice any problems?**
+<br>
+
+```{r}
+#| echo: true
+#| 
+mpc_minutes_unnested |>
+  count(word, sort = T)
+
+```
+
+# The RBI MPC Minutes - Word freq
+
+
+```{r}
+#| echo: false
+#| warning: false
+
+mpc_minutes_unnested |>
+  count(word, sort = T) |>
+  mutate(
+    word = fct_reorder(word,n)
+  ) |>
+  filter(n>500)|>
+  ggplot(aes(word,n))+
+  geom_col(fill = "#ffffff", colour = "#000000")+
+  geom_text(aes(label = word), 
+  angle = 90)+
+  labs(x = NULL,
+  y= NULL) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_blank(),
+    panel.grid.major.x = element_blank()
+  )
+
+
+```
