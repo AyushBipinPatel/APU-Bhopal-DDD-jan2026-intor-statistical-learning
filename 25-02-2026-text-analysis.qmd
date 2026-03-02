@@ -25,6 +25,8 @@ format:
 
 library(tidyverse)
 library(tidytext)
+library(magrittr)
+library(sentimentr)
 ```
 
 ```{r}
@@ -175,7 +177,7 @@ mpc_minutes |>
 
 mpc_minutes |>
   mutate(
-    identifier = str_remove(identifier,".{1,}g,")
+    identifier = str_remove(identifier,".{1,}ting|.{1,}ting,")
   ) |>
   unnest_tokens(output = word,input = lines)  -> mpc_minutes_unnested
 
@@ -363,3 +365,419 @@ mpc_minutes |>
 ```
 
 # All this is fine. Where is the cool stuff?
+
+# Sentiment Analysis
+
+[With word frequencies we can compare what is relatively more or less important across a selection of documents. (With some caution)]{.fragment fragment-index='1'}
+<br><br>
+[But it would be better to get an understanding of the *opinion* or *sentiment* behid the text.]{.fragment fragment-index='2'}
+<br><br>
+[What is the text trying to convey? Doom, Acche din (good times), Caution, negativity, etc.]{.fragment fragment-index='3'}
+<br><br>
+[Text mining can help us to programmatically find the emotional content of a text.]{.fragment fragment-index='4'}
+
+# Sentiment Analysis
+
+> We will consider the sentiment of an entire text as the sum of sentiment content of thee individual words of the text.
+
+<br>
+*This is one of the approaches*
+
+# Sentiment Analysis - Lexicons
+
+[For the tidytext format, unigram based lexicons are suited.]{.fragment fragment-index='1'}
+<br>
+[Three general purpose lexicons are `AFINN`, `bing`, and `nrc`.]{.fragment fragment-index='2'}
+<br>
+[These are available through the {tidytext}.]{.fragment fragment-index='3'}
+<br>
+[These do not contain all possible english words. Many words are neutral.]{.fragment fragment-index='4'}
+<br>
+[Developed through croudsourcing or by authors, are validate by some combination of approaches.]{.fragment fragment-index='5'}
+<br>
+[What care should be taken while choosing a lexicon?]{.fragment fragment-index='6'}
+
+# Sentiment Analysis - AFINN
+
+**Words are assigned a score between [-5,5]. Negative scores indicate negative sentiments and positve scores indicate positive sentiments**
+
+<br>
+
+```{r}
+get_sentiments("afinn")
+```
+
+# Sentiment Analysis - bing
+
+**Classifies words in to a binary: positive or negative**
+
+<br>
+
+```{r}
+get_sentiments("bing")
+```
+
+# Sentiment Analysis - nrc
+
+**"categorizes words in a binary fashion (“yes”/“no”) into categories of positive, negative, anger, anticipation, disgust, fear, joy, sadness, surprise, and trust"**
+
+<br>
+
+```{r}
+get_sentiments("nrc")
+```
+
+## Sentiment Analysis - Use with Care
+
+**Unigram based approaches have issues with qualifier words**
+
+> There is a decline in growth.
+
+> This is not good.
+
+## Subjectivity in Sentiment Analysis
+
+**Ref: [Sentiment Analysis and Subjectivity ](https://www.cs.uic.edu/~liub/FBS/NLP-handbook-sentiment-analysis.pdf)**
+
+> *“(1) I bought an iPhone a few days ago. (2) It was such a nice phone. (3) The touch screen was
+really cool. (4) The voice quality was clear too. (5) Although the battery life was not long, that is
+ok for me. (6) However, my mother was mad with me as I did not tell her before I bought it. (7)
+She also thought the phone was too expensive, and wanted me to return it to the shop. … ”*
+
+**Who/What are these opinions about? Who is making/providing these opinions?**
+
+# Looking for Sentiments in the RBI MPC Minutes
+
+Once again, lets look at the [doc](https://website.rbi.org.in/documents/87730/39710918/PR1769MPCf562eb05339b404f8dc23d07725ef354.pdf).
+
+# Looking for Sentiments in the RBI MPC Minutes
+
+> The real stuff is in para 6 and later. (Assessments, Outlook, Rationale, and Statements)
+
+# MPC Sentiments - Set up
+
+**While we use words as unit of analyses, we aggregate at Para level**
+
+```{r}
+#| echo: true
+
+  mpc_minutes |> 
+  # Mark Para number for each line from the MPC
+  filter(str_length(str_squish(lines))>2)|> 
+  mutate(
+    lines = str_squish(lines),
+    para_num = str_extract(lines,pattern = "^[:digit:]{1,2}\\. ")
+  ) |> 
+  fill(para_num , .direction = "down") |>
+  mutate(
+    para_num = str_remove_all(para_num, "[:punct:]") |> str_squish() |> as.integer()
+  ) |> 
+  # Keep only relevant para of the MPC
+  filter(para_num >= 6) |>
+  # Get in one-word-per-row shape
+  unnest_tokens(word, lines) -> mpc_sentiments_setup
+
+  mpc_sentiments_setup
+
+
+```
+
+# MPC Sentiments - augment with lexicon
+
+```{r}
+#| echo: true
+
+mpc_sentiments_setup |>
+  # rermove stop words |>
+  anti_join(stop_words) |> 
+  # join with sentiments lexicon
+  inner_join(get_sentiments("bing")) -> mpc_sentiments_augmented
+
+  mpc_sentiments_augmented
+
+```
+
+# MPC Sentiments - Aggregate at Para level
+
+```{r}
+#| echo: true
+
+ mpc_sentiments_augmented |>
+  # get MPC para level sentiment
+  group_by(identifier, para_num) |>
+    summarise(
+      pos = sum(sentiment == "positive")/n(),
+      neg = sum(sentiment == "negative")/n(),
+      tot = pos + neg
+    ) |>
+  ungroup() -> mpc_sentiments_bing
+
+mpc_sentiments_bing
+```
+
+# MPC Sentiments - Bing
+
+```{r}
+#| echo: true
+
+mpc_sentiments_bing |>
+   # Get the MPC identifier as date
+  mutate(
+    identifier = str_remove(identifier,".{1,} Meeting|.{1,} Meeting,"),
+    identifier = str_remove(identifier,"^,"),
+    identifier = str_remove(identifier,"[.{1,}]"),
+    mpc_date = lubridate::my(paste0(str_extract(str_squish(identifier),"^[:alpha:]{1,}"), str_extract(identifier," [:digit:]{4}")))
+  ) |>
+  select(mpc_date, para_num, pos, neg, tot) -> mpc_sentiments_bing
+
+mpc_sentiments_bing
+
+```
+
+
+## MPC Positive Sentiments - Bing
+
+```{r}
+#| echo: true
+#| output-location: slide
+#| fig-height: 8
+
+
+mpc_sentiments_bing |>
+  ggplot(aes(para_num,as.character(mpc_date))) +
+  geom_tile(aes(fill = pos),colour = "#ffffff") +
+  scale_fill_gradient(low = "#ccece6",high = "#006d2c")+
+  scale_x_continuous(breaks = seq(6,125,2),expand = expansion(mult = c(0,0)))+
+  guides(fill = guide_colourbar(barwidth = 15))+
+  labs(
+    y = NULL,
+    x = "Paragrapha Number",
+    title = "Proportion of Positive words in a Para using bing lexicon"
+  ) +
+  theme_minimal()+
+  theme(
+    plot.title.position = "plot",
+    legend.position = "top",
+    legend.direction = "horizontal",
+    legend.title = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank() 
+  )
+
+```
+
+## MPC Negative Sentiments - Bing
+
+```{r}
+#| echo: true
+#| output-location: slide
+#| fig-height: 8
+
+
+mpc_sentiments_bing |>
+  ggplot(aes(para_num,as.character(mpc_date))) +
+  geom_tile(aes(fill = neg),colour = "#ffffff") +
+  scale_fill_gradient(low = "#fdd49e",high = "#b30000")+
+  scale_x_continuous(breaks = seq(6,125,2),expand = expansion(mult = c(0,0)))+
+  guides(fill = guide_colourbar(barwidth = 15))+
+  labs(
+    y = NULL,
+    x = "Paragrapha Number",
+    title = "Proportion of Negative words in a Para using bing lexicon"
+  ) +
+  theme_minimal()+
+  theme(
+    plot.title.position = "plot",
+    legend.position = "top",
+    legend.direction = "horizontal",
+    legend.title = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank() 
+  )
+```
+
+## MPC Cumulative Sentiments - Bing
+
+```{r}
+#| echo: true
+#| output-location: slide
+#| fig-height: 8
+
+mpc_sentiments_bing |>
+  mutate(
+    cumilative = pos-neg
+  ) |>
+  ggplot(aes(para_num,as.character(mpc_date))) +
+  geom_tile(aes(fill = cumilative),colour = "#ffffff") +
+  scale_fill_gradient2(high = "#4575b4",low = "#d73027",mid = "#ffffbf")+
+  scale_x_continuous(breaks = seq(6,125,2),expand = expansion(mult = c(0,0)))+
+  guides(fill = guide_colourbar(barwidth = 15))+
+  labs(
+    y = NULL,
+    x = "Paragrapha Number",
+    title = "Cumulative prop of positive sentiment words in a Para using bing lexicon"
+  ) +
+  theme_minimal()+
+  theme(
+    plot.title.position = "plot",
+    legend.position = "top",
+    legend.direction = "horizontal",
+    legend.title = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank() 
+  )
+
+```
+
+## Same stuff using Loughran-McDonald
+
+
+```{r}
+#| echo: false
+#| fig-height: 8
+
+
+mpc_sentiments_setup |>
+  # rermove stop words |>
+  anti_join(stop_words) |> 
+  # join with sentiments lexicon
+  inner_join(textdata::lexicon_loughran()) |> 
+  # get MPC para level sentiment
+  group_by(identifier, para_num) |>
+    summarise(
+      pos = sum(sentiment == "positive")/n(),
+      neg = sum(sentiment == "negative")/n(),
+      uncertainty = sum(sentiment == "uncertainty")/n()
+    ) |>
+  ungroup() |>
+  mutate(
+    identifier = str_remove(identifier,".{1,} Meeting|.{1,} Meeting,"),
+    identifier = str_remove(identifier,"^,"),
+    identifier = str_remove(identifier,"[.{1,}]"),
+    mpc_date = lubridate::my(paste0(str_extract(str_squish(identifier),"^[:alpha:]{1,}"), str_extract(identifier," [:digit:]{4}")))
+  ) |>
+  select(mpc_date, para_num, pos, neg, uncertainty) -> mpc_sentiments_lm
+
+mpc_sentiments_lm|>
+  ggplot(aes(para_num,as.character(mpc_date))) +
+  geom_tile(aes(fill = pos),colour = "#ffffff") +
+  scale_fill_gradient(low = "#ccece6",high = "#006d2c")+
+  scale_x_continuous(breaks = seq(6,125,2),expand = expansion(mult = c(0,0)))+
+  guides(fill = guide_colourbar(barwidth = 15))+
+  labs(
+    y = NULL,
+    x = "Paragrapha Number",
+    title = "Proportion of Positive words in a Para using LM lexicon"
+  ) +
+  theme_minimal()+
+  theme(
+    plot.title.position = "plot",
+    legend.position = "top",
+    legend.direction = "horizontal",
+    legend.title = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank() 
+  )
+
+```
+
+## Same stuff using Loughran-McDonald
+
+
+```{r}
+#| echo: false
+#| fig-height: 8
+
+mpc_sentiments_lm|>
+  ggplot(aes(para_num,as.character(mpc_date))) +
+  geom_tile(aes(fill = neg),colour = "#ffffff") +
+  scale_fill_gradient(low = "#fdd49e",high = "#b30000")+
+  scale_x_continuous(breaks = seq(6,125,2),expand = expansion(mult = c(0,0)))+
+  guides(fill = guide_colourbar(barwidth = 15))+
+  labs(
+    y = NULL,
+    x = "Paragrapha Number",
+    title = "Proportion of Negative words in a Para using LM lexicon"
+  ) +
+  theme_minimal()+
+  theme(
+    plot.title.position = "plot",
+    legend.position = "top",
+    legend.direction = "horizontal",
+    legend.title = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank() 
+  )
+
+```
+
+## Same stuff using Loughran-McDonald
+
+
+```{r}
+#| echo: false
+#| fig-height: 8
+
+mpc_sentiments_lm|>
+  ggplot(aes(para_num,as.character(mpc_date))) +
+  geom_tile(aes(fill = neg),colour = "#ffffff") +
+  scale_fill_gradient(low = "#a7c7f1ff",high = "#025085ff")+
+  scale_x_continuous(breaks = seq(6,125,2),expand = expansion(mult = c(0,0)))+
+  guides(fill = guide_colourbar(barwidth = 15))+
+  labs(
+    y = NULL,
+    x = "Paragrapha Number",
+    title = "Proportion of words indicating uncertainty in a Para using LM lexicon"
+  ) +
+  theme_minimal()+
+  theme(
+    plot.title.position = "plot",
+    legend.position = "top",
+    legend.direction = "horizontal",
+    legend.title = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank() 
+  )
+
+```
+
+# Sentence as Token
+
+**Using {Sentimentr}** see [highlight file](rbi-mpc-for-text-analyses/mpc-highlight.html).
+
+```{r}
+#| echo: true
+#| code-fold: true
+
+mpc_minutes |>
+  # Mark Para number for each line from the MPC
+  filter(str_length(str_squish(lines))>2)|> 
+  mutate(
+    lines = str_squish(lines),
+    para_num = str_extract(lines,pattern = "^[:digit:]{1,2}\\. ")
+  ) |> 
+  fill(para_num , .direction = "down") |>
+  mutate(
+    para_num = str_remove_all(para_num, "[:punct:]") |> str_squish() |> as.integer()
+  ) |> 
+  # Keep only relevant para of the MPC
+  filter(para_num >= 6) |>
+  # Clean identifier
+   mutate(
+    identifier = str_remove(identifier,".{1,} Meeting|.{1,} Meeting,"),
+    identifier = str_remove(identifier,"^,"),
+    identifier = str_remove(identifier,"[.{1,}]"),
+    identifier = lubridate::my(paste0(str_extract(str_squish(identifier),"^[:alpha:]{1,}"), str_extract(identifier," [:digit:]{4}")))
+  ) |>
+  group_by(identifier,para_num) |>
+  summarise(
+    text = str_c(lines,collapse = " ")
+  ) |>
+  ungroup() |>
+  mutate(
+    split_para = get_sentences(text)
+  ) %$%
+  sentiment_by(split_para, list(identifier,para_num), polartity_dt = lexicon::hash_sentiment_loughran_mcdonald) 
+
+
+```
