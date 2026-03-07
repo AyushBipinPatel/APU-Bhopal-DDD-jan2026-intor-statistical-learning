@@ -27,6 +27,7 @@ library(tidyverse)
 library(tidytext)
 library(magrittr)
 library(sentimentr)
+library(topicmodels)
 ```
 
 ```{r}
@@ -69,7 +70,7 @@ read_csv("rbi-mpc-for-text-analyses/cleaned-mpc-minutes-text.csv") -> mpc_minute
 
 - You have installed RStudio/Positron/VScode or any other IDE. It is recommended that you work through an IDE
 
-- You have the libraries `{tidytext} ` installed
+- You have the libraries `{tidytext} {sentimentr} {quanteda} {magrittr} {topicmodels}` installed
 
 :::
 
@@ -91,7 +92,7 @@ read_csv("rbi-mpc-for-text-analyses/cleaned-mpc-minutes-text.csv") -> mpc_minute
 <br><br>
 [*"Treating text as data frames of individual words allows us to manipulate, summarize, and visualize the characteristics of text easily and integrate natural language processing into effective workflows..."*]{.fragment fragment-index='3'}
 <br><br>
-[We do this using the {tidytext} alonmg with other know methods]{.fragment fragment-index='4'}
+[We do this using the {tidytext} along with other know methods]{.fragment fragment-index='4'}
 
 # Tidy Data
 
@@ -460,6 +461,7 @@ Once again, lets look at the [doc](https://website.rbi.org.in/documents/87730/39
 
 ```{r}
 #| echo: true
+#| output-location: slide
 
   mpc_minutes |> 
   # Mark Para number for each line from the MPC
@@ -720,7 +722,7 @@ mpc_sentiments_lm|>
 
 mpc_sentiments_lm|>
   ggplot(aes(para_num,as.character(mpc_date))) +
-  geom_tile(aes(fill = neg),colour = "#ffffff") +
+  geom_tile(aes(fill = uncertainty),colour = "#ffffff") +
   scale_fill_gradient(low = "#a7c7f1ff",high = "#025085ff")+
   scale_x_continuous(breaks = seq(6,125,2),expand = expansion(mult = c(0,0)))+
   guides(fill = guide_colourbar(barwidth = 15))+
@@ -777,7 +779,148 @@ mpc_minutes |>
   mutate(
     split_para = get_sentences(text)
   ) %$%
-  sentiment_by(split_para, list(identifier,para_num), polartity_dt = lexicon::hash_sentiment_loughran_mcdonald) 
+  sentiment_by(split_para, list(identifier,para_num), polartity_dt = lexicon::hash_sentiment_loughran_mcdonald) -> snetence_para_sentiment_mpc
 
+snetence_para_sentiment_mpc
+
+```
+
+## Sentence as token
+
+
+```{r}
+#| echo: false
+#| fig-height: 8
+
+snetence_para_sentiment_mpc |>
+  ggplot(aes(para_num,as.character(identifier))) +
+  geom_tile(aes(fill = ave_sentiment),colour = "#ffffff") +
+  scale_fill_gradient2(high = "#4575b4",low = "#d73027",mid = "#ffffbf")+
+  scale_x_continuous(breaks = seq(6,125,2),expand = expansion(mult = c(0,0)))+
+  guides(fill = guide_colourbar(barwidth = 15))+
+  labs(
+    y = NULL,
+    x = "Paragrapha Number",
+    title = "Average sentiment in a Para using LM lexicon"
+  ) +
+  theme_minimal()+
+  theme(
+    plot.title.position = "plot",
+    legend.position = "top",
+    legend.direction = "horizontal",
+    legend.title = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank() 
+  )
+
+
+```
+
+# Beyond Descriptive
+
+> We have seen ways to perfrom some form of descriptive analysis on text data. Some of this can be extended in building features for modeling exercises.
+
+# Topic Modeling
+<br>
+
+> We might need to divide documents in different groups to better understand what are these about.
+
+<br>
+
+*We use Topic Modeling, a unsupervised classification methods, to "cluseter" documents in different natural groups*
+
+# Topic Modeling
+
+[Latent Dirichlet allocation (LDA) used for topic modeling]{.fragment fragment-index='1'}
+<br><br>
+[Each doc is treated(modeled) as a (finite)mixture of topics]{.fragment fragment-index='2'}
+<br><br>
+[Each tpoic is treated as a mixture of words]{.fragment fragment-index='3'}
+<br><br>
+[Allows for overlap, complete discrete groups are not necessary]{.fragment fragment-index='4'}
+
+# LDA
+
+[See paper](https://jmlr.org/papers/volume3/blei03a/blei03a.pdf) for theory/Math.
+
+[**Doc as mixture of topics**: MPC1 can be about fuel inflation due to stressed middle east conditions. This can be 10% of MPC1. MPC14 can be about food grain inflation due to poor rain. This can be 20% of MPC14...]{.fragment fragment-index='1'}
+<br><br>
+
+[**Topic as mixture of words**: Let us say that MPCs can be about topics like agri production, fuel price shocks, fiscal space. Each of these topics can be realted to different words. Words can overlap across topics.]{.fragment fragment-index='2'}
+
+# LDA
+
+Simultaneously, LDA estimates:
+
+1. mixture of words associated with each topic 
+2. mixture of topics associate with each document
+
+
+# Applying LDA
+
+**Convert data to tidytext format**
+
+```{r}
+#| echo: true
+#| output-location: slide
+mpc_minutes|>
+  mutate(
+    lines = str_squish(lines),
+    lines = ifelse(str_detect(lines,"[:digit:]{1,2}\\."),
+    str_remove(lines,"[:digit:]{1,2}\\."),
+    lines
+    ),
+    identifier = str_remove(identifier,".{1,} Meeting|.{1,} Meeting,"),
+    identifier = str_remove(identifier,"^,"),
+    identifier = str_remove(identifier,"[.{1,}]") |> str_squish(),
+    mpc_date = lubridate::my(paste0(str_extract(str_squish(identifier),"^[:alpha:]{1,}"), str_extract(identifier," [:digit:]{4}")))
+  ) |>
+  filter(str_length(lines)>=2) |>
+  select(mpc_date,lines)|>
+  unnest_tokens(word,lines) -> mpc_tidy
+
+mpc_tidy
+
+```
+
+# Applying LDA
+
+**get word counts by doc**
+
+
+```{r}
+#| echo: true
+
+mpc_tidy |>
+  anti_join(stop_words)|>
+  count(mpc_date,word,sort = T) -> words_count_mpc
+
+words_count_mpc
+```
+
+# Applying LDA
+
+**Convert tidy data to dopcument term Matrix**<br>
+Each row is a doc, each column is a term, values are freq of appearance
+<br>
+
+```{r}
+#| echo: true
+#| output-location: slide
+
+words_count_mpc |>
+  cast_dtm(mpc_date,word,n) -> mpc_dtm
+
+mpc_dtm
+```
+
+# Applying LDA
+
+**I believe MPC minutes can have around 4 topics**
+
+```{r}
+#| echo: true
+
+mpc_lda <- LDA(mpc_dtm,k = 4)
 
 ```
