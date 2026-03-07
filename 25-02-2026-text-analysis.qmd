@@ -28,12 +28,16 @@ library(tidytext)
 library(magrittr)
 library(sentimentr)
 library(topicmodels)
+library(ldatuning)
 ```
 
 ```{r}
 #| echo: false
 
 read_csv("rbi-mpc-for-text-analyses/cleaned-mpc-minutes-text.csv") -> mpc_minutes
+read_csv("pm-speeches/DrManmohan-singh-speeches.csv") -> speech_data
+
+speech_data[,-1] -> speech_data
 ```
 
 # Hello
@@ -855,6 +859,27 @@ Simultaneously, LDA estimates:
 1. mixture of words associated with each topic 
 2. mixture of topics associate with each document
 
+# Applying LDA
+
+A collection of speeches given by Dr Manmohan Singh is available [here](https://archive.org/details/selectedspeeches03unse).
+<br><br>
+These are speeches delivered in year 2006-07. On various topics at various occasions/locations.
+<br><br>
+My goal is to demonstrate how to apply LDA on these text to group them in a given number of topics. 
+<br><br>
+Lets see what comes out.
+
+# Applying LDA
+
+**The data**
+<br>
+
+```{r}
+#| echo: true
+
+speech_data
+```
+
 
 # Applying LDA
 
@@ -863,23 +888,10 @@ Simultaneously, LDA estimates:
 ```{r}
 #| echo: true
 #| output-location: slide
-mpc_minutes|>
-  mutate(
-    lines = str_squish(lines),
-    lines = ifelse(str_detect(lines,"[:digit:]{1,2}\\."),
-    str_remove(lines,"[:digit:]{1,2}\\."),
-    lines
-    ),
-    identifier = str_remove(identifier,".{1,} Meeting|.{1,} Meeting,"),
-    identifier = str_remove(identifier,"^,"),
-    identifier = str_remove(identifier,"[.{1,}]") |> str_squish(),
-    mpc_date = lubridate::my(paste0(str_extract(str_squish(identifier),"^[:alpha:]{1,}"), str_extract(identifier," [:digit:]{4}")))
-  ) |>
-  filter(str_length(lines)>=2) |>
-  select(mpc_date,lines)|>
-  unnest_tokens(word,lines) -> mpc_tidy
+speech_data|>
+  unnest_tokens(word,text) -> speech_data_tidy
 
-mpc_tidy
+speech_data_tidy
 
 ```
 
@@ -891,11 +903,11 @@ mpc_tidy
 ```{r}
 #| echo: true
 
-mpc_tidy |>
+speech_data_tidy |>
   anti_join(stop_words)|>
-  count(mpc_date,word,sort = T) -> words_count_mpc
+  count(title,word,sort = T) -> words_count_speech_data
 
-words_count_mpc
+words_count_speech_data
 ```
 
 # Applying LDA
@@ -908,10 +920,10 @@ Each row is a doc, each column is a term, values are freq of appearance
 #| echo: true
 #| output-location: slide
 
-words_count_mpc |>
-  cast_dtm(mpc_date,word,n) -> mpc_dtm
+words_count_speech_data |>
+  cast_dtm(title,word,n) -> speech_dtm
 
-mpc_dtm
+speech_dtm
 ```
 
 # Applying LDA
@@ -921,6 +933,109 @@ mpc_dtm
 ```{r}
 #| echo: true
 
-mpc_lda <- LDA(mpc_dtm,k = 4)
+speech_lda <- LDA(speech_dtm,k = 4)
 
+```
+
+# Infering from LDA
+
+**How are the topics and speeches grouped?**
+<br>
+
+```{r}
+#| echo: true
+
+tibble(
+  title = speech_lda |> get_topics() |> names(),
+  topic = speech_lda |> get_topics()
+ ) |>
+  arrange(topic)
+
+```
+
+
+# Infering from LDA
+
+**Per-topic-per-word probablities**
+<br>
+
+```{r}
+#| echo: true
+
+tidy(speech_lda, matric = "beta") -> speech_beta
+
+speech_beta
+```
+
+# Infering from LDA
+
+**Per-topic-per-word probablities**
+<br>
+
+```{r}
+#| echo: true
+#| output-location: slide
+
+speech_beta |>
+  group_by(topic) |>
+  slice_max(beta, n=10) |>
+  ungroup() |>
+  arrange(topic,-beta)|>
+  mutate(
+    term = reorder_within(term,beta,topic)
+  ) |>
+    ggplot(aes(beta,term)) +
+    geom_col(aes(fill = factor(topic))) +
+    facet_wrap(~topic, scales = "free") +
+    scale_y_reordered() +
+    theme_minimal() +
+    theme(legend.position = "none")
+```
+
+# Infering from LDA
+
+**You can also show term probablities as distance across two topics**
+<br>
+The distance between the probability of a term `k` in topic `A` and topic `B`, for all `K` terms.
+<br><br>
+in our case this can be done for `K` terms across pairs of topics `1-2`,`1-3`,`1-4`,`2-3`,`2-4`,`3-4`
+<br><br>
+Since some probablities are very small, best show the distance as $log_2(\frac{\beta_2}{\beta_1})$
+
+# Inferring from LDA
+
+**per-document-per-topic probabilities**
+<br>
+
+```{r}
+#| echo: true
+
+speech_lda |>
+  tidy(matrix = "gamma") |>
+  arrange(document)
+```
+
+# Finding the right `k`
+
+```{r}
+#| echo: true
+#| cache: true
+#| output-location: slide
+FindTopicsNumber(
+  speech_dtm,
+  topics = c(2:60),
+  metrics = c("Griffiths2004", "CaoJuan2009", "Arun2010", "Deveaud2014"),
+  method = "Gibbs",
+  mc.cores = 3L,
+  verbose = TRUE) -> results_lda_speech
+```
+
+# Finding the right `k`
+
+
+```{r}
+#| echo: true
+#| output-location: slide
+
+FindTopicsNumber_plot(results_lda_speech)
 ```
