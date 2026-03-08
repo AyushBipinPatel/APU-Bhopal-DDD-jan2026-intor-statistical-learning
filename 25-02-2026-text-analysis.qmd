@@ -1249,7 +1249,6 @@ dim(news_train_prepped)
 ```{r}
 #| echo: true
 #| output-location: slide
-#| cache: true
 
 dense_news <- keras_model_sequential(input_shape = c(80)) |> # a linear stack of layers
   layer_embedding(
@@ -1280,16 +1279,16 @@ dense_news <- keras_model_sequential(input_shape = c(80)) |> # a linear stack of
 
 **Optimization alogrithm and loss function**
 
-
 ```{r}
 #| echo: true
 
 dense_news |>
   compile(
-    optimizer = "adam",
-    loss = "sparse_categorical_crossentropy",
-    metrics = c("accuracy")
+    optimizer = optimizer_adam(), #"adam"
+    loss = loss_sparse_categorical_crossentropy(), #"sparse_categorical_crossentropy"
+    metrics = metric_sparse_categorical_accuracy() #c("accuracy")
   )
+
 ```
 
 # Dense Neural Network
@@ -1365,4 +1364,26 @@ dense_fit_test
 
 plot(dense_fit_test) +
   theme_minimal()
+```
+
+# Dense Neural Network
+
+
+```{r}
+#| echo: true
+
+dense_news |> 
+  evaluate(news_baked, news_baked_response)
+
+```
+
+# Dense Neural Network
+
+
+```{r}
+#| echo: true
+
+dense_news |> 
+  predict(news_baked)
+
 ```
