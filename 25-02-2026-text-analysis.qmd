@@ -29,6 +29,9 @@ library(magrittr)
 library(sentimentr)
 library(topicmodels)
 library(ldatuning)
+library(keras3)
+library(recipes)
+library(textrecipes)
 ```
 
 ```{r}
@@ -74,7 +77,7 @@ speech_data[,-1] -> speech_data
 
 - You have installed RStudio/Positron/VScode or any other IDE. It is recommended that you work through an IDE
 
-- You have the libraries `{tidytext} {sentimentr} {quanteda} {magrittr} {topicmodels}` installed
+- You have the libraries `{tidytext} {sentimentr} {quanteda} {magrittr} {topicmodels} {ldatuning} {keras} {recipes} {textrecipes}` installed
 
 :::
 
@@ -1032,10 +1035,334 @@ FindTopicsNumber(
 
 # Finding the right `k`
 
-
 ```{r}
 #| echo: true
 #| output-location: slide
 
 FindTopicsNumber_plot(results_lda_speech)
+```
+
+# Supervised models for text analysis
+
+> Deep learning examples
+
+# Dense Neural Netowrks
+
+**Densely-connected neural network (feed-forward)**
+
+![from smltar](https://smltar.com/diagram-files/dnn-architecture.png)
+
+
+# Dense Neural Network
+
+[Input is provided all at once]{.fragment fragment-index='1'}
+<br><br>
+[Inputs are fully connected to the first hidden layer (densely)]{.fragment fragment-index='2'}
+<br><br>
+["Neurons" of a given layer are only connected to the next layer]{.fragment fragment-index='3'}
+<br><br>
+[The number of layers and the number of neurons in a layer are variable and are  hyperparameter of the model]{.fragment fragment-index='4'}
+<br><br>
+[What is not accurate in the previous image?]{.fragment fragment-index='5'}
+
+# Dense Neural Network
+
+> Our goal is to build a binary classification model.
+
+We use data from Reuters on news description. We try to classify news based on description.
+
+# Dense Neural Network
+
+**Data**
+
+```{r}
+#| echo: false
+
+read_csv("C:/Users/ayush/Downloads/train.csv") -> news
+
+news |>
+  janitor::clean_names()|>
+  mutate(
+    class_index = as.factor(class_index),
+    combined_text = paste(title,description,sep = ". ")
+  ) -> news
+
+  glimpse(news |> select(class_index,combined_text))
+```
+
+
+# Dense Neural Network
+
+**Traing and Test sets**
+<br>
+
+```{r}
+#| echo: true
+
+news |>
+  rsample::initial_split() -> news_split
+
+news_train <- rsample::training(news_split)
+
+news_test <- rsample::testing(news_split)
+```
+
+
+# Dense Neural Network
+
+**Pre-processing**
+<br>
+[Sequences are modeled. Need to choose a max length of sequence.]{.fragment fragment-index='1'}
+<br><br>
+[Observations(docs/articles/chapters) longer than the chosen sequence are truncated]{.fragment fragment-index='2'}
+<br><br>
+[Observations shorter than the chosen sequence are cushioned by non-informative value]{.fragment fragment-index='3'}
+<br><br>
+[Sequence lenght is a hyperparamenter.]{.fragment fragment-index='4'}
+<br><br>
+[Best sequence lenght is something that does not waste too much information and doesnt add too many non-informative values]{.fragment fragment-index='5'}
+
+# Dense Neural Networks
+
+**Pre-processing**
+<br>
+
+```{r}
+#| echo: false
+
+news_train |>
+  mutate(
+    n_words = tokenizers::count_words(combined_text)
+  ) |>
+    ggplot(aes(n_words)) +
+     geom_bar() + 
+     theme_minimal()
+
+```
+
+# Dense Neural Networks
+
+**Pre-processing**
+<br>
+
+```{r}
+#| echo: true
+
+max_words <- 3e4
+
+max_length <- 80
+
+```
+
+# Dense Neural Networks
+
+**Feature Engineeing**
+<br>
+
+```{r}
+#| echo: true
+
+news_recipe <- recipe(
+  ~ combined_text,
+  data = news_train
+  ) |>
+    step_tokenize(combined_text) |>
+    step_tokenfilter(combined_text, max_tokens = max_words) |>
+    step_sequence_onehot(combined_text, sequence_length = max_length,
+    truncating = "post")
+
+```
+
+# Dense Neural Networks
+
+**Feature Engineeing**
+<br>
+
+1. one-hot sequence embedding transforms tokens to a numeric class so that we can perform modelling.
+
+2. Also, one-hot sequence embedding considers the order of the tokens as well, unlike tf and tf-idf
+
+# Dense Neural Network
+
+**Tiny example of what features* look like**
+
+```{r}
+#| echo: true
+
+small_data <- tibble(
+  text = c("Adventure Dice Game",
+           "Spooky Dice Game",
+           "Illustrated Book of Monsters",
+           "Monsters, Ghosts, Goblins, Me, Myself and I")
+)
+
+small_spec <- recipe(~ text, data = small_data) %>%
+  step_tokenize(text) %>%
+  step_sequence_onehot(text, sequence_length = 6, prefix = "")
+
+prep(small_spec)
+```
+
+# Dense Neural Network
+
+**Tiny example of what features* look like**
+
+```{r}
+#| echo: true
+
+prep(small_spec) %>%
+  tidy(2)
+
+```
+
+# Dense Neural Network
+
+**Tiny example of what features* look like** (where are the monsters in the matrix ?)
+
+```{r}
+#| echo: true
+
+prep(small_spec) %>%
+  bake(new_data = NULL, composition = "matrix")
+
+```
+
+# Dense Neural Network
+
+```{r}
+#| echo: true
+
+news_prep <- prep(news_recipe)
+
+news_train_prepped <- bake(news_prep,
+      new_data = NULL, 
+      composition = "matrix")
+
+dim(news_train_prepped)
+
+```
+
+# Dense Neural Network
+
+**A simple flattened dense network**
+
+```{r}
+#| echo: true
+#| output-location: slide
+#| cache: true
+
+dense_news <- keras_model_sequential(input_shape = c(80)) |> # a linear stack of layers
+  layer_embedding(
+    input_dim = max_words + 1,
+    output_dim = 12,
+    input_length = max_length
+  ) |>
+    layer_flatten() |>
+    layer_dense(units = 32, activation = "relu") |>
+    layer_dense(unit = 4, activation = "softmax")
+
+  dense_news
+```
+
+# Dense Neural Network
+
+**A simple flattened dense network**
+
+[`keras_model_sequential()`: compose a stack of layers with no feedback, skips or loops, i.e. **linear stack of layers**]{.fragment fragment-index='1'}
+<br>
+
+[`layer_embedding()`: Data is converted to a tensor of $n_{obs} * S_{max} * OutDim$,  in our case (90,000 * 80* 12)]{.fragment fragment-index='2'}
+<br>
+
+[`layer_flatten()`: the 12 * 80 matrix is converted into a vector with 960 features. So each news description is 960 numbers.]{.fragment fragment-index='3'}
+
+# Dense Neural Network
+
+**Optimization alogrithm and loss function**
+
+
+```{r}
+#| echo: true
+
+dense_news |>
+  compile(
+    optimizer = "adam",
+    loss = "sparse_categorical_crossentropy",
+    metrics = c("accuracy")
+  )
+```
+
+# Dense Neural Network
+
+**Fitting the model**
+
+
+```{r}
+#| echo: true
+
+dense_fit_news <- dense_news |>
+  fit(
+    x = news_train_prepped,
+    y = as.integer(news_train$class_index)-1, # carefull
+    batch_size = 250,
+    epochs = 20,
+    validation_split = 0.25
+  )
+
+dense_fit_news
+```
+
+# Dense Neural Network
+
+
+```{r}
+#| echo: true
+#| output-location: slide
+
+plot(dense_fit_news) +
+  theme_minimal()
+```
+
+# Dense Neural Network
+
+**Evaluate on test**
+<br>
+
+```{r}
+#| echo: true
+
+news_baked <- bake(news_prep, new_data = news_test, composition = "matrix")
+
+dim(news_baked)
+```
+
+# Dense Neural Network
+
+
+```{r}
+#| echo: true
+
+news_baked_response <- as.integer(news_test$class_index)-1
+
+dense_fit_test <- dense_news |>
+  fit(
+    x = news_train_prepped,
+    y = as.integer(news_train$class_index)-1, # carefull
+    batch_size = 250,
+    epochs = 3,
+    validation_data = list(news_baked, news_baked_response)
+  )
+
+dense_fit_test
+```
+
+# Dense Neural Network
+
+
+```{r}
+#| echo: true
+#| output-location: slide
+
+plot(dense_fit_test) +
+  theme_minimal()
 ```
