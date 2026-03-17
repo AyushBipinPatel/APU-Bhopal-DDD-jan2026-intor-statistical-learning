@@ -25,6 +25,7 @@ Learning.
 2. [Lecture Slides](26-01-2026-linear-regression-refresher.html): Intro to Modern Statistics
 3. [Lecture Slides](28-01-2026-resampling-methods.html): Resampling
 4. [Lecture Slides](12-02-2026-decision-trees-emsemble-methods.html): Decision Trees and Ensemble Methods
+5. [Lecture Slides](25-02-2026-text-analysis.html): Text Analysis - An Introduction
 
 Assessment Details
 
@@ -43,3 +44,4 @@ Links to resourses:
 1. [ISLR](https://www.statlearning.com/), also check out the youtube videos they have. Use the june 2023 corrected version of the book
 2. [IMS](https://openintro-ims.netlify.app/)
 3. For a simulated and intuitive explanation of Bias-Variance Trade off see [Link](https://mlu-explain.github.io/bias-variance/)
+4. [Text Mining with R](https://www.tidytextmining.com/)
