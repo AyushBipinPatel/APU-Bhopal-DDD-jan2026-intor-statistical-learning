@@ -26,6 +26,7 @@ Learning.
 3. [Lecture Slides](28-01-2026-resampling-methods.html): Resampling
 4. [Lecture Slides](12-02-2026-decision-trees-emsemble-methods.html): Decision Trees and Ensemble Methods
 5. [Lecture Slides](25-02-2026-text-analysis.html): Text Analysis - An Introduction
+6. [Slides](20-03-2026-self-assessment.html): Self Assessmentv-Fundamentals of exploratory and descriptive analysis
 
 Assessment Details
 
