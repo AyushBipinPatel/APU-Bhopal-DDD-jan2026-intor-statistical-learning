@@ -1,0 +1,257 @@
+---
+title: "A Self Assessment of Fundamentals"
+author: "Ayush Patel"
+subtitle: "DDD: Elements of Statistical Machine Learning & Politics of Data"
+institute: "At Azim Premji University, Bhopal"
+date: today
+date-format: "DD MMM, YYYY"
+format: 
+  revealjs:
+    fig-height: 6
+    fig-width: 14
+    embed-resources: true
+    margin-left: 50px
+    margin-right: 50px
+    slide-number: c/t
+    width: 1400
+    height: 850
+    theme: [default, theme.scss]
+    footer: "Email: ayush.ap58@gmail.com"
+---
+
+```{r}
+#| include: false
+#| warning: false
+
+library(tidyverse)
+library(palmerpenguins)
+library(ggtext)
+library(scales)
+```
+
+# Hello
+
+::::{.columns}
+
+:::{.column}
+
+[I am Ayush.]{.fragment fragment-index="1" style="font-size:45px"}
+
+[I am a researcher working at the intersection of data, development and economics.]{.fragment fragment-index="2" style="font-size:25px"}
+
+[I am a [RStudio (Posit) certified tidyverse Instructor.](https://education.rstudio.com/trainers/people/patel+ayush/)]{.fragment fragment-index="3" style="font-size:25px"}
+
+[I am a Researcher at [Oxford Poverty and Human development Initiative (OPHI)](https://ophi.org.uk/), at the University of Oxford.]{.fragment fragment-index="4" style="font-size:25px"}
+
+:::
+
+:::{.column}
+
+![[Hello (Eh bonjour– donc–.) by Charles Motte](https://www.metmuseum.org/art/collection/search/392118"Well)](https://images.metmuseum.org/CRDImages/dp/original/DP808141.jpg){fig-align="center" height=400 .lightbox}
+ 
+
+:::
+
+::::
+
+# How many can you get?
+
+## Replicate exe 1
+
+Data: starwars
+
+
+```{r}
+#| echo: false
+#| label: rep-1
+
+starwars |>
+    ggplot(aes(height,mass)) +
+    geom_point() +
+    scale_y_log10() +
+    labs(
+        title = "Characters in Starwars movies - Physical Attributes",
+        y = "Weight in Kg",
+        x = "Height in cm"
+    ) +
+    theme_minimal()
+```
+
+## Replicate exe 2 
+
+data: storms
+
+```{r}
+#| echo: false
+#| label: rep-2
+
+storms |>
+    group_by(year) |>
+    summarise(
+        n = unique(name) |> length()
+    )|>
+    ungroup()|>
+    pull(n) |>
+    median() -> median_strms
+
+storms |>
+    group_by(year) |>
+    summarise(
+        n = unique(name) |> length()
+    )|>
+    ungroup()|>
+    ggplot(aes(year,n)) +
+    geom_line() +
+    geom_point() +
+    geom_hline(aes(yintercept = median_strms), linetype = 2)+
+    labs(
+        title = "Storms in a year",
+        subtitle = "The dashed line is median number of storms in a year",
+        y = NULL,
+        x = NULL
+    ) +
+    theme_minimal()
+```
+
+## Replicate exe 3
+
+Data: storms
+
+```{r}
+#| label: rep-3
+#| echo: false
+
+storms |>
+    mutate(
+        datetime = make_datetime(year,month,day,hour)
+    ) |>
+        group_by(name)|>
+        summarise(
+            duration_begin = min(datetime),
+            duration_end = max(datetime),
+            duration = (max(datetime) - min(datetime)) |> as.period()
+        ) |> 
+            kableExtra::kable() |>
+            kableExtra::kable_styling() |>
+            kableExtra::scroll_box(width = '100%', height = '500px')
+```
+
+## Replicate exe 4
+
+```{r}
+#| label: rep-4
+#| echo: false
+
+economics_long |>
+    ggplot(aes(x = date,value01))+
+        geom_line(aes(linetype = variable)) +
+        labs(
+            title = "Consumption, population, savings rate, unemployment",
+            y = "Scaled values",
+            x = NULL
+        ) +
+        theme_minimal() +
+        theme(
+            legend.position = "top",
+            legend.direction = "horizontal",
+            legend.title.position = "bottom"
+        )
+```
+
+## Replicate exe 5
+
+```{r}
+#| echo: false
+#| label: rep-5
+
+msleep |>
+    ggplot(aes(bodywt,sleep_total)) +
+    geom_point(aes(colour = vore)) +
+    scale_colour_viridis_d()+
+    scale_x_log10(labels = label_number()) +
+    labs(
+        title = "Why are chunky animals not sleeping a lot?",
+        y = "Total Sleep hours in a day",
+        x = "Bodyweight in Kg"
+    )+
+    theme_minimal() +
+    theme(
+            legend.position = "top",
+            legend.direction = "horizontal",
+            legend.title.position = "bottom"
+        )
+```
+
+## Replicate exe 6
+
+Data: starwars
+
+
+```{r}
+#| label: rep-6
+#| echo: false
+
+starwars |>
+    mutate(
+        films = modify(films,~unlist(.x) |> str_c(collapse = ",")) |> unlist()
+    ) |>
+    tidyr::separate_rows(films,sep = ",") |> 
+    group_by(films) |>
+    summarise(
+        n = n()
+    ) |>
+    ungroup() |>
+    mutate(
+        films = as.factor(films) |>
+            fct_reorder(n)
+    ) |>
+    ggplot(aes(n,films)) +
+    geom_col() +
+    geom_text(aes(label = n, x = n+1))+
+    labs(
+        title = "Number of Characters in each film",
+        y = NULL,
+        x = NULL
+    ) +
+    theme_minimal()
+```
+
+## Exe - 7
+
+Use `penguins` data from the {palmerpenguins} package. Consider all combinations of species-sex as a unique group. From the data extract the observations that are equal to or above the third standard deviation of body mass for a respective group.
+
+## Exe - 8
+
+Use the `world_bank_pop` data from the {tidyr} package. Show how population growth has changed for India and its neighbours (shared boundary)
+
+## Exe - 9
+
+Use `us_rent_income` data from the {tidyr} package. Create a table that show the ratio of rent to income for each state, Arrange it in descending order.
+
+## Exe - 10
+
+How many instances in the `txhousing` data are such where the mean sale value is more than 125% of the median sale value?
+
+## Exe - 11
+
+Show monthly trends of accidental deaths for each year using the data `accdeaths`
+
+## Exe - 12
+
+Find the averge age for patients with status `D` (dead) for each transmission category using the `Aids2` data.
+
+## Exe - 13
+
+Use `edibnb` from {dsbox}. Create a faceted histogram where each facet represents a neighbourhood and displays the distribution of Airbnb prices in that neighbourhood. Think critically about whether it makes more sense to stack the facets on top of each other in a column, lay them out in a row, or wrap them around. Along with your visualisation, include your reasoning for the layout you chose for your facets.
+
+use `devtools::install_github("tidyverse/dsbox")` install the package {dsbox}
+
+## Exe - 14
+
+Answer these about the `lego_sales` data from {dsbox}
+
+1. What are the three most common first names of purchasers?
+2. What are the three most common themes of Lego sets purchased?
+3. Among the most common theme of Lego sets purchased, what is the most common subtheme?
+4. Create a new variable called age_group and group the ages into the following categories: “18 and under”, “19 - 25”, “26 - 35”, “36 - 50”, “51 and over”.
+5. Which age group has purchased the highest number of Lego sets.
